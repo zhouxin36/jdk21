@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright © 2017  Google, Inc.
  * Copyright © 2019  Facebook, Inc.
  *

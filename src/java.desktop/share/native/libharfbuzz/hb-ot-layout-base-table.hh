@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright © 2016  Elie Roux <elie.roux@telecom-bretagne.eu>
  * Copyright © 2018  Google, Inc.
  * Copyright © 2018-2019  Ebrahim Byagowi

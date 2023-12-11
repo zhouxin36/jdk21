@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright © 2016  Igalia S.L.
  *
  *  This is part of HarfBuzz, a text shaping library.

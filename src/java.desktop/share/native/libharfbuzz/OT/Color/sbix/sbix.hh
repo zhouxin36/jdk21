@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright © 2018  Ebrahim Byagowi
  * Copyright © 2020  Google, Inc.
  *
