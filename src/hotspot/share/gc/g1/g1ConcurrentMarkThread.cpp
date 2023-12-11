@@ -114,23 +114,24 @@ class G1ConcPhaseTimer : public GCTraceConcTimeImpl<LogLevel::Info, LOG_TAGS(gc,
 
 void G1ConcurrentMarkThread::run_service() {
   _vtime_start = os::elapsedVTime();
-
+  // 等待下一个并发标记循环的开始，并返回执行的命令
   while (wait_for_next_cycle()) {
     assert(in_progress(), "must be");
 
     GCIdMark gc_id_mark;
     FormatBuffer<128> title("Concurrent %s Cycle", _state == FullMark ? "Mark" : "Undo");
     GCTraceConcTime(Info, gc) tt(title);
-
+     // 并发标记开始
     concurrent_cycle_start();
-
+    // 执行全标记
     if (_state == FullMark) {
       concurrent_mark_cycle_do();
     } else {
+        // 执行撤销标记
       assert(_state == UndoMark, "Must do undo mark but is %d", _state);
       concurrent_undo_cycle_do();
     }
-
+    // 并发标记结束
     concurrent_cycle_end(_state == FullMark && !_cm->has_aborted());
 
     _vtime_accum = (os::elapsedVTime() - _vtime_start);

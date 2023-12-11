@@ -778,10 +778,13 @@ HeapWord* G1CollectedHeap::attempt_allocation_at_safepoint(size_t word_size,
          "the current alloc region was unexpectedly found to be non-null");
 
   if (!is_humongous(word_size)) {
+    // 当持有适当的锁时将调用此函数。它首先尝试在当前分配区域中进行分配，
+    // 如果失败，比attempt_allocation多一步，尝试使用新区域进行分配。
     return _allocator->attempt_allocation_locked(word_size);
   } else {
     HeapWord* result = humongous_obj_allocate(word_size);
     if (result != nullptr && policy()->need_to_start_conc_mark("STW humongous allocation")) {
+        // 初始化 并发标记字段
       collector_state()->set_initiate_conc_mark_if_possible(true);
     }
     return result;
@@ -2494,7 +2497,7 @@ bool G1CollectedHeap::do_collection_pause_at_safepoint() {
   if (GCLocker::check_active_before_gc()) {
     return false;
   }
-
+  // 调用
   do_collection_pause_at_safepoint_helper();
   return true;
 }
@@ -2565,6 +2568,9 @@ void G1CollectedHeap::do_collection_pause_at_safepoint_helper() {
 
   _bytes_used_during_gc = 0;
 
+  // 判断是否需要并发标记
+  // _initiate_conc_mark_if_possible设置false
+  // _in_concurrent_start_gc设置true
   policy()->decide_on_concurrent_start_pause();
   // Record whether this pause may need to trigger a concurrent operation. Later,
   // when we signal the G1ConcurrentMarkThread, the collector state has already
@@ -2573,6 +2579,7 @@ void G1CollectedHeap::do_collection_pause_at_safepoint_helper() {
 
   // Perform the collection.
   G1YoungCollector collector(gc_cause());
+  // todo 开始: YGC
   collector.collect();
 
   // It should now be safe to tell the concurrent mark thread to start
@@ -2585,6 +2592,8 @@ void G1CollectedHeap::do_collection_pause_at_safepoint_helper() {
     // after this point does not assume that we are the only GC thread running.
     // Note: of course, the actual marking work will not start until the safepoint
     // itself is released in SuspendibleThreadSet::desynchronize().
+    // todo 并发标记 字段标识 FullMark/UndoMark
+    // g1ConcurrentMarkThread.cpp # G1ConcurrentMarkThread::run_service
     start_concurrent_cycle(collector.concurrent_operation_is_full_mark());
     ConcurrentGCBreakpoints::notify_idle_to_active();
   }

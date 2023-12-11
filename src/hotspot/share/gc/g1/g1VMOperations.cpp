@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2001, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -121,17 +121,18 @@ VM_G1CollectForAllocation::VM_G1CollectForAllocation(size_t         word_size,
                                                      GCCause::Cause gc_cause) :
   VM_CollectForAllocation(word_size, gc_count_before, gc_cause),
   _gc_succeeded(false) {}
-
+// todo 开始：G1GC
+// 例：内存分配-慢分配失败
+// g1CollectedHeap.cpp## do_collection_pause(word_size, gc_count_before, &succeeded, GCCause::_g1_inc_collection_pause);
 void VM_G1CollectForAllocation::doit() {
   G1CollectedHeap* g1h = G1CollectedHeap::heap();
 
   if (_word_size > 0) {
-    // An allocation has been requested. So, try to do that first.
+    // 重新尝试分配内存
     _result = g1h->attempt_allocation_at_safepoint(_word_size,
                                                    false /* expect_null_cur_alloc_region */);
     if (_result != nullptr) {
-      // If we can successfully allocate before we actually do the
-      // pause then we will consider this pause successful.
+      // 如果分配成功，当gc成功
       _gc_succeeded = true;
       return;
     }
@@ -139,6 +140,7 @@ void VM_G1CollectForAllocation::doit() {
 
   GCCauseSetter x(g1h, _gc_cause);
   // Try a partial collection of some kind.
+  // todo G1GC开始
   _gc_succeeded = g1h->do_collection_pause_at_safepoint();
 
   if (_gc_succeeded) {

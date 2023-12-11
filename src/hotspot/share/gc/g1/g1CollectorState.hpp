@@ -52,12 +52,11 @@ class G1CollectorState {
   // concurrent start work.
   volatile bool _in_concurrent_start_gc;
 
-  // At the end of a pause we check the heap occupancy and we decide
-  // whether we will start a marking cycle during the next pause. If
-  // we decide that we want to do that, set this parameter. This parameter will
-  // stay set until the beginning of a subsequent pause (not necessarily
-  // the next one) when we decide that we will indeed start a marking cycle and
-  // do the concurrent start phase work.
+  // 如果在暂停开始时设置了_initiate_conc_mark_if_possible，则建议暂停应通过执行并发启动工作来启动标记周期。
+  // 但是，并发标记线程可能仍在完成上一个标记周期（例如，清除标记位图）。
+  // 如果是这种情况，我们就无法开始新的循环，我们将不得不等待并发标记线程完成它正在做的事情。
+  // 在这种情况下，我们将推迟标记周期的启动决定，以备下一次暂停。
+  // 当我们最终决定开始一个循环时，我们将设置_in_concurrent_start_gc该设置将保持true不变，直到并发启动暂停结束，执行并发启动工作。
   volatile bool _initiate_conc_mark_if_possible;
 
   // Marking or rebuilding remembered set work is in progress. Set from the end

@@ -48,7 +48,6 @@ void CMTask::do_marking_step(double time_target_ms,
     drain_global_stack(true);
     do {
         if (!has_aborted() && _curr_region != NULL) {
-            ……
             // 这个MemRegion是新增的对象，所以从finger开始到结束全部开始标记
             MemRegion mr = MemRegion(_finger, _region_limit);
             if (mr.is_empty()) {
