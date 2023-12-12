@@ -92,6 +92,7 @@ ALWAYSINLINE void InstanceKlass::oop_oop_iterate_oop_map(OopMapBlock* map, oop o
   T* const end = p + map->count();
 
   for (; p < end; ++p) {
+      // 调用
     Devirtualizer::do_oop(closure, p);
   }
 }
@@ -136,6 +137,7 @@ ALWAYSINLINE void InstanceKlass::oop_oop_iterate_oop_maps(oop obj, OopClosureTyp
   OopMapBlock* const end_map = map + nonstatic_oop_map_count();
 
   for (; map < end_map; ++map) {
+      // 调用
     oop_oop_iterate_oop_map<T>(map, obj, closure);
   }
 }
@@ -166,7 +168,7 @@ ALWAYSINLINE void InstanceKlass::oop_oop_iterate(oop obj, OopClosureType* closur
   if (Devirtualizer::do_metadata(closure)) {
     Devirtualizer::do_klass(closure, this);
   }
-
+// 调用
   oop_oop_iterate_oop_maps<T>(obj, closure);
 }
 

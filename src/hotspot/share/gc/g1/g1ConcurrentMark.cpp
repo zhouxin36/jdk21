@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2001, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -880,6 +880,7 @@ public:
       task->record_start_time();
       if (!_cm->has_aborted()) {
         do {
+            // 调用
           task->do_marking_step(G1ConcMarkStepDurationMillis,
                                 true  /* do_termination */,
                                 false /* is_serial*/);
@@ -929,7 +930,7 @@ void G1ConcurrentMark::scan_root_region(const MemRegion* region, uint worker_id)
   assert(hr->top_at_mark_start() == region->start(),
          "MemRegion start should be equal to TAMS");
 #endif
-
+  // 使用根区域扫描实现闭包（调用该类的do_oop）
   G1RootRegionScanClosure cl(_g1h, this, worker_id);
 
   const uintx interval = PrefetchScanIntervalInBytes;
@@ -938,6 +939,7 @@ void G1ConcurrentMark::scan_root_region(const MemRegion* region, uint worker_id)
   while (curr < end) {
     Prefetch::read(curr, interval);
     oop obj = cast_to_oop(curr);
+      // 调用
     size_t size = obj->oop_iterate_size(&cl);
     assert(size == obj->size(), "sanity");
     curr += size;
@@ -951,9 +953,12 @@ public:
     WorkerTask("G1 Root Region Scan"), _cm(cm) { }
 
   void work(uint worker_id) {
+      // 获得要扫描的根分区
     G1CMRootMemRegions* root_regions = _cm->root_regions();
+      // 实际使用字段G1CMRootMemRegions#_root_regions
     const MemRegion* region = root_regions->claim_next();
     while (region != nullptr) {
+        // 针对每一个分区处理
       _cm->scan_root_region(region, worker_id);
       region = root_regions->claim_next();
     }
@@ -977,11 +982,14 @@ void G1ConcurrentMark::scan_root_regions() {
     G1CMRootRegionScanTask task(this);
     log_debug(gc, ergo)("Running %s using %u workers for %u work units.",
                         task.name(), _num_concurrent_workers, root_regions()->num_root_regions());
+      // 调用任务执行
     _concurrent_workers->run_task(&task, _num_concurrent_workers);
 
     // It's possible that has_aborted() is true here without actually
     // aborting the survivor scan earlier. This is OK as it's
     // mainly used for sanity checking.
+      // 释放锁，g1YoungCollector.cpp#G1YoungCollector::collect的wait_for_root_region_scanning()会等待锁释放
+      // 并发根扫描依赖Survivor区，不能在期间发生YGC
     root_regions()->scan_finished();
   }
 }
@@ -1045,8 +1053,9 @@ void G1ConcurrentMark::mark_from_roots() {
 
   // Parallel task terminator is set in "set_concurrency_and_phase()"
   set_concurrency_and_phase(active_workers, true /* concurrent */);
-
+  // 实现
   G1CMConcurrentMarkingTask marking_task(this);
+  // 调用
   _concurrent_workers->run_task(&marking_task);
   print_stats();
 }
@@ -2548,6 +2557,7 @@ void G1CMTask::do_marking_step(double time_target_ms,
   // steal work from the other G1CMTasks. It only makes sense to
   // enable stealing when the termination protocol is enabled
   // and do_marking_step() is not being called serially.
+  // 是否可偷，尝试从其他的task偷work来执行
   bool do_stealing = do_termination && !is_serial;
 
   G1Predictions const& predictor = _g1h->policy()->predictor();
@@ -2570,10 +2580,13 @@ void G1CMTask::do_marking_step(double time_target_ms,
   // Set up the bitmap and oop closures. Anything that uses them is
   // eventually called from this method, so it is OK to allocate these
   // statically.
+  // 设置并发标记BitMap闭包实现
   G1CMBitMapClosure bitmap_closure(this, _cm);
+  // 设置并发标记对象闭包实现
   G1CMOopClosure cm_oop_closure(_g1h, this);
   set_cm_oop_closure(&cm_oop_closure);
 
+  // 溢出中断
   if (_cm->has_overflown()) {
     // This can happen if the mark stack overflows during a GC pause
     // and this task, after a yield point, restarts. We have to abort
@@ -2586,6 +2599,7 @@ void G1CMTask::do_marking_step(double time_target_ms,
   // look at SATB buffers before the next invocation of this method.
   // If enough completed SATB buffers are queued up, the regular clock
   // will abort this task so that it restarts.
+    // 处理SATB队列
   drain_satb_buffers();
   // ...then partially drain the local queue and the global stack
   drain_local_queue(true);

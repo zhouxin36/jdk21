@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2001, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -111,7 +111,7 @@ class G1ConcPhaseTimer : public GCTraceConcTimeImpl<LogLevel::Info, LOG_TAGS(gc,
     _cm->gc_timer_cm()->register_gc_concurrent_end();
   }
 };
-
+// todo 开始: 并发标记
 void G1ConcurrentMarkThread::run_service() {
   _vtime_start = os::elapsedVTime();
   // 等待下一个并发标记循环的开始，并返回执行的命令
@@ -178,7 +178,7 @@ bool G1ConcurrentMarkThread::phase_mark_loop() {
   log_info(gc, marking)("Concurrent Mark");
 
   for (uint iter = 1; true; ++iter) {
-    // Subphase 1: Mark From Roots.
+    // Subphase 1: 从根开始并发标记.
     if (subphase_mark_from_roots()) return true;
 
     // Subphase 2: Preclean (optional)
@@ -212,6 +212,7 @@ bool G1ConcurrentMarkThread::mark_loop_needs_restart() const {
 bool G1ConcurrentMarkThread::subphase_mark_from_roots() {
   ConcurrentGCBreakpoints::at("AFTER MARKING STARTED");
   G1ConcPhaseTimer p(_cm, "Concurrent Mark From Roots");
+  // 调用
   _cm->mark_from_roots();
   return _cm->has_aborted();
 }
@@ -285,13 +286,13 @@ void G1ConcurrentMarkThread::concurrent_mark_cycle_do() {
   // We can not easily abort before root region scan either because of the
   // reasons mentioned in G1CollectedHeap::abort_concurrent_cycle().
 
-  // Phase 1: Scan root regions.
+  // Phase 1: 根扫描子阶段
   if (phase_scan_root_regions()) return;
 
-  // Phase 2: Actual mark loop.
+  // Phase 2: 并发子标记
   if (phase_mark_loop()) return;
 
-  // Phase 3: Rebuild remembered sets and scrub dead objects.
+  // Phase 3: 再标记并清除死对象.
   if (phase_rebuild_and_scrub()) return;
 
   // Phase 4: Wait for Cleanup.

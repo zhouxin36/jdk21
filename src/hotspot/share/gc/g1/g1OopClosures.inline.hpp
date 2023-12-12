@@ -110,6 +110,7 @@ inline void G1RootRegionScanClosure::do_oop_work(T* p) {
     return;
   }
   oop obj = CompressedOops::decode_not_null(heap_oop);
+    // 调用
   _cm->mark_in_bitmap(_worker_id, obj);
 }
 

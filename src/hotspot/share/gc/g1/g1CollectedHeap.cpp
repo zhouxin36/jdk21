@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2001, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -783,6 +783,7 @@ HeapWord* G1CollectedHeap::attempt_allocation_at_safepoint(size_t word_size,
     return _allocator->attempt_allocation_locked(word_size);
   } else {
     HeapWord* result = humongous_obj_allocate(word_size);
+    // todo 并发标记触发时机，大对象分配成功
     if (result != nullptr && policy()->need_to_start_conc_mark("STW humongous allocation")) {
         // 初始化 并发标记字段
       collector_state()->set_initiate_conc_mark_if_possible(true);

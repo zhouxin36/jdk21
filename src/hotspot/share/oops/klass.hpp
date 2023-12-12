@@ -70,9 +70,13 @@ class Klass : public Metadata {
   // Klass Kinds for all subclasses of Klass
   enum KlassKind {
     InstanceKlassKind,
+    // InstanceRefKlass 是 Java 类的专用 InstanceKlass，这些类是 java/lang/ref/Reference 的子类。这些类用于实现soft/weak/final/phantom引用和终结，需要垃圾收集器的特殊处理
     InstanceRefKlassKind,
+    // java.lang.Class类的特殊实例类型
     InstanceMirrorKlassKind,
+    // 类加载器特殊类型
     InstanceClassLoaderKlassKind,
+    // 堆栈块特殊实例类型
     InstanceStackChunkKlassKind,
     TypeArrayKlassKind,
     ObjArrayKlassKind,

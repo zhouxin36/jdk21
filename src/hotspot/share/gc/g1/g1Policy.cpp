@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2001, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -693,7 +693,7 @@ double G1Policy::constant_other_time_ms(double pause_time_ms) const {
 bool G1Policy::about_to_start_mixed_phase() const {
   return _g1h->concurrent_mark()->cm_thread()->in_progress() || collector_state()->in_young_gc_before_mixed();
 }
-// todo 并发标记触发时机2，大对象分配成功
+
 bool G1Policy::need_to_start_conc_mark(const char* source, size_t alloc_word_size) {
     // 不在并发标记，或者混合GC之前的最后一次YGC
   if (about_to_start_mixed_phase()) {

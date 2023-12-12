@@ -1025,9 +1025,8 @@ void G1YoungCollector::collect() {
   // Individual parallel phases may override this.
   set_young_collection_default_active_worker_threads();
 
-  // Wait for root region scan here to make sure that it is done before any
-  // use of the STW workers to maximize cpu use (i.e. all cores are available
-  // just to do that).
+    // 等待锁，g1ConcurrentMark.cpp#G1ConcurrentMark::scan_root_regions的root_regions()->scan_finished()会锁释放
+    // 并发根扫描依赖Survivor区，不能在期间发生YGC
   wait_for_root_region_scanning();
 
   G1YoungGCVerifierMark vm(this);

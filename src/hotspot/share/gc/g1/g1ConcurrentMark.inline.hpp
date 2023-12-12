@@ -75,9 +75,10 @@ inline bool G1ConcurrentMark::mark_in_bitmap(uint const worker_id, oop const obj
   // Some callers may have stale objects to mark above TAMS after humongous reclaim.
   // Can't assert that this is a valid object at this point, since it might be in the process of being copied by another thread.
   assert(!hr->is_continues_humongous(), "Should not try to mark object " PTR_FORMAT " in Humongous continues region %u above TAMS " PTR_FORMAT, p2i(obj), hr->hrm_index(), p2i(hr->top_at_mark_start()));
-
+// 并发的标记这个地址指向的对象是存活的，CAS操作
   bool success = _mark_bitmap.par_mark(obj);
   if (success) {
+      // 添加记录
     add_to_liveness(worker_id, obj, obj->size());
   }
   return success;
