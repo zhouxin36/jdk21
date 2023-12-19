@@ -435,6 +435,7 @@ void TenuredGeneration::collect(bool   full,
                                 bool   clear_all_soft_refs,
                                 size_t size,
                                 bool   is_tlab) {
+    // todo 开始：串行FGC
   GenCollectedHeap* gch = GenCollectedHeap::heap();
 
   STWGCTimer* gc_timer = GenMarkSweep::gc_timer();
@@ -444,7 +445,7 @@ void TenuredGeneration::collect(bool   full,
   gc_tracer->report_gc_start(gch->gc_cause(), gc_timer->gc_start());
 
   gch->pre_full_gc_dump(gc_timer);
-
+  // 标记
   GenMarkSweep::invoke_at_safepoint(clear_all_soft_refs);
 
   gch->post_full_gc_dump(gc_timer);

@@ -209,6 +209,7 @@ void VM_GenCollectForAllocation::doit() {
 }
 
 void VM_GenCollectFull::doit() {
+    // todo 开始：串行FGC入口
   SvcGCMarker sgcm(SvcGCMarker::FULL);
 
   GenCollectedHeap* gch = GenCollectedHeap::heap();

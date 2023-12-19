@@ -471,7 +471,7 @@ void G1YoungCollector::pre_evacuate_collection_set(G1EvacInfo* evacuation_info) 
     phase_times()->record_pre_evacuate_prepare_time_ms((Ticks::now() - start).seconds() * 1000.0);
   }
 
-  // Needs log buffers flushed.
+  // 计算Cset集合
   calculate_collection_set(evacuation_info, policy()->max_pause_time_ms());
 
   // Please see comment in g1CollectedHeap.hpp and
@@ -699,6 +699,7 @@ void G1YoungCollector::evacuate_initial_collection_set(G1ParScanThreadStateSet* 
                                       &root_processor,
                                       num_workers,
                                       has_optional_evacuation_work);
+      // 开启任务，调用g1YoungCollector.cpp#work
     task_time = run_task_timed(&g1_par_task);
     // Closing the inner scope will execute the destructor for the
     // G1RootProcessor object. By subtracting the WorkerThreads task from the total
@@ -1038,6 +1039,7 @@ void G1YoungCollector::collect() {
     // other trivial setup above).
     policy()->record_young_collection_start();
 
+      // 计算Cset集合
     pre_evacuate_collection_set(jtm.evacuation_info());
 
     G1ParScanThreadStateSet per_thread_states(_g1h,
@@ -1046,7 +1048,7 @@ void G1YoungCollector::collect() {
                                               &_evac_failure_regions);
 
     bool may_do_optional_evacuation = collection_set()->optional_region_length() != 0;
-    // Actually do the work...
+    // 真正执行初始化cset
     evacuate_initial_collection_set(&per_thread_states, may_do_optional_evacuation);
 
     if (may_do_optional_evacuation) {
@@ -1061,7 +1063,7 @@ void G1YoungCollector::collect() {
     // Need to report the collection pause now since record_collection_pause_end()
     // modifies it to the next state.
     jtm.report_pause_type(collector_state()->young_gc_pause_type(_concurrent_operation_is_full_mark));
-
+      // 方法中会尝试把_initiate_conc_mark_if_possible赋值为true
     policy()->record_young_collection_end(_concurrent_operation_is_full_mark, evacuation_failed());
   }
   TASKQUEUE_STATS_ONLY(_g1h->task_queues()->print_and_reset_taskqueue_stats("Oop Queue");)

@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2001, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -84,9 +84,10 @@ void GenMarkSweep::invoke_at_safepoint(bool clear_all_softrefs) {
   gch->save_used_regions();
 
   allocate_stacks();
-
+  //  标记扫描1
   mark_sweep_phase1(clear_all_softrefs);
 
+  // 计算压缩整理后的地址
   mark_sweep_phase2();
 
   // Don't add any more derived pointers during phase3
@@ -95,8 +96,10 @@ void GenMarkSweep::invoke_at_safepoint(bool clear_all_softrefs) {
   DerivedPointerTable::set_active(false);
 #endif
 
+  // 更新被引用对象的地址
   mark_sweep_phase3();
 
+  // 移动对象进行压缩整理
   mark_sweep_phase4();
 
   restore_marks();
@@ -164,7 +167,8 @@ void GenMarkSweep::mark_sweep_phase1(bool clear_all_softrefs) {
 
   {
     StrongRootsScope srs(0);
-
+    // 标记处理和前面YGC提到的标记处理是类似的。不同之处在于用到的Closure以及要额外
+    // 处理代码对象；另外标记是串行执行的。
     CLDClosure* weak_cld_closure = ClassUnloading ? nullptr : &follow_cld_closure;
     MarkingCodeBlobClosure mark_code_closure(&follow_root_closure, !CodeBlobToOopClosure::FixRelocations, true);
     gch->process_roots(GenCollectedHeap::SO_None,
@@ -179,7 +183,9 @@ void GenMarkSweep::mark_sweep_phase1(bool clear_all_softrefs) {
     GCTraceTime(Debug, gc, phases) tm_m("Reference Processing", gc_timer());
 
     ReferenceProcessorPhaseTimes pt(_gc_timer, ref_processor()->max_num_queues());
+    // 单线程GC
     SerialGCRefProcProxyTask task(is_alive, keep_alive, follow_stack_closure);
+    // 实际调用void MarkSweep::FollowStackClosure::do_void() { follow_stack(); }
     const ReferenceProcessorStats& stats = ref_processor()->process_discovered_references(task, pt);
     pt.print_all_references();
     gc_tracer()->report_gc_reference_stats(stats);
@@ -198,9 +204,10 @@ void GenMarkSweep::mark_sweep_phase1(bool clear_all_softrefs) {
     CodeCache::UnloadingScope scope(&is_alive);
 
     // Unload classes and purge the SystemDictionary.
+  // 对系统字典、符号表标记、编译代码、klass做卸载处理，这里的卸载就是把无用对象从这些
     bool purged_class = SystemDictionary::do_unloading(gc_timer());
 
-    // Unload nmethods.
+    // 卸载 nmethods.
     CodeCache::do_unloading(purged_class);
 
     // Prune dead klasses from subklass/sibling/implementor lists.

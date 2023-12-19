@@ -87,6 +87,7 @@ void MarkSweep::follow_object(oop obj) {
     // be split into chunks if needed.
     MarkSweep::follow_array((objArrayOop)obj);
   } else {
+      // MarkAndPushClosure 调用
     obj->oop_iterate(&mark_and_push_closure);
   }
 }
@@ -175,6 +176,7 @@ void MarkSweep::mark_object(oop obj) {
   // some marks may contain information we need to preserve so we store them away
   // and overwrite the mark.  We'll restore it at the end of markSweep.
   markWord mark = obj->mark();
+  // 对象头标记
   obj->set_mark(markWord::prototype().set_marked());
 
   ContinuationGCSupport::transform_stack_chunk(obj);
@@ -185,10 +187,12 @@ void MarkSweep::mark_object(oop obj) {
 }
 
 template <class T> void MarkSweep::mark_and_push(T* p) {
+    // 遍历标记入栈
   T heap_oop = RawAccess<>::oop_load(p);
   if (!CompressedOops::is_null(heap_oop)) {
     oop obj = CompressedOops::decode_not_null(heap_oop);
     if (!obj->mark().is_marked()) {
+        // 标记
       mark_object(obj);
       _marking_stack.push(obj);
     }

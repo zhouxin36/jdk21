@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2001, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -119,11 +119,13 @@ inline void G1CMTask::push(G1TaskQueueEntry task_entry) {
   if (!_task_queue->push(task_entry)) {
     // The local task queue looks full. We need to push some entries
     // to the global stack.
+    // 移除并加入全局标记栈
     move_entries_to_global_stack();
 
     // this should succeed since, even if we overflow the global
     // stack, we should have definitely removed some entries from the
     // local queue. So, there must be space on it.
+    // 二次压入
     bool success = _task_queue->push(task_entry);
     assert(success, "invariant");
   }
@@ -149,6 +151,11 @@ inline bool G1CMTask::is_below_finger(oop obj, HeapWord* global_finger) const {
 
     // True if obj is less than the local finger, or is between
     // the region limit and the global finger.
+    // 判断
+    // 1、在region 中，处于local finger 到region末尾的；不用push
+    // 2、超出当前region的，且在global finger的后面的；不用push
+    //  region：|--push---|lf|---no push---|
+    //  global：--- push ---|gf|--- no push ---
     if (objAddr < _finger) {
       return true;
     } else if (objAddr < _region_limit) {
@@ -167,12 +174,17 @@ inline void G1CMTask::process_grey_task_entry(G1TaskQueueEntry task_entry) {
 
   if (scan) {
     if (task_entry.is_array_slice()) {
+        // 是切片数组
       _words_scanned += _objArray_processor.process_slice(task_entry.slice());
     } else {
       oop obj = task_entry.obj();
       if (G1CMObjArrayProcessor::should_be_sliced(obj)) {
+          // 是数组
         _words_scanned += _objArray_processor.process_obj(obj);
       } else {
+          // 是对象
+          // G1CMOopClosure 为闭包实现
+          // 遍历该field对象，进行灰色标记
         _words_scanned += obj->oop_iterate_size(_cm_oop_closure);;
       }
     }
@@ -219,6 +231,7 @@ inline void G1CMTask::abort_marking_if_regular_check_fail() {
 }
 
 inline bool G1CMTask::make_reference_grey(oop obj) {
+    // 对对象进行标记和计数
   if (!_cm->mark_in_bitmap(_worker_id, obj)) {
     return false;
   }
@@ -240,6 +253,7 @@ inline bool G1CMTask::make_reference_grey(oop obj) {
   // be visited when a task is scanning the region and will also
   // be pushed on the stack. So, some duplicate work, but no
   // correctness problems.
+  // 标记在finger（local finger 、global finger）之前的对象
   if (is_below_finger(obj, global_finger)) {
     G1TaskQueueEntry entry = G1TaskQueueEntry::from_oop(obj);
     if (obj->is_typeArray()) {

@@ -35,7 +35,7 @@ public enum GCCause {
   _gc_locker ("GCLocker Initiated GC"),
   _heap_inspection ("Heap Inspection Initiated GC"),
   _heap_dump ("Heap Dump Initiated GC"),
-  _wb_young_gc ("WhiteBox Initiated Young GC"),
+  _wb_young_gc ("WhiteBox Initiated Yo`ung GC"),
   _wb_full_gc ("WhiteBox Initiated Full GC"),
 
   _no_gc ("No GC"),

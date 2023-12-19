@@ -83,6 +83,7 @@ bool G1CMBitMapClosure::do_addr(HeapWord* const addr) {
   assert(addr >= _task->finger(), "invariant");
 
   // We move that task's local finger along.
+  // 移动finger
   _task->move_finger_to(addr);
 
   _task->scan_task_entry(G1TaskQueueEntry::from_oop(cast_to_oop(addr)));
@@ -867,6 +868,7 @@ class G1CMConcurrentMarkingTask : public WorkerTask {
 
 public:
   void work(uint worker_id) {
+      // todo 开始: 并发标记 2、并发扫描阶段
     ResourceMark rm;
 
     double start_vtime = os::elapsedVTime();
@@ -953,6 +955,7 @@ public:
     WorkerTask("G1 Root Region Scan"), _cm(cm) { }
 
   void work(uint worker_id) {
+      // todo 开始: 并发标记 1、根扫描阶段
       // 获得要扫描的根分区
     G1CMRootMemRegions* root_regions = _cm->root_regions();
       // 实际使用字段G1CMRootMemRegions#_root_regions
@@ -1235,6 +1238,7 @@ public:
 };
 
 void G1ConcurrentMark::remark() {
+    // todo 开始: 并发标记 3、再标记阶段
   assert_at_safepoint_on_vm_thread();
 
   // If a full collection has happened, we should not continue. However we might
@@ -1252,6 +1256,7 @@ void G1ConcurrentMark::remark() {
 
   {
     GCTraceTime(Debug, gc, phases) debug("Finalize Marking", _gc_timer_cm);
+    // 调用再标记
     finalize_marking();
   }
 
@@ -1445,6 +1450,7 @@ void G1ConcurrentMark::compute_new_sizes() {
 }
 
 void G1ConcurrentMark::cleanup() {
+// todo 开始: 并发标记 4、清理阶段
   assert_at_safepoint_on_vm_thread();
 
   // If a full collection has happened, we shouldn't do this.
@@ -1459,6 +1465,7 @@ void G1ConcurrentMark::cleanup() {
 
   verify_during_pause(G1HeapVerifier::G1VerifyCleanup, VerifyLocation::CleanupBefore);
 
+  // 更新记忆集
   if (needs_remembered_set_rebuild()) {
     // Update the remset tracking information as well as marking all regions
     // as fully parsable.
@@ -1482,6 +1489,7 @@ void G1ConcurrentMark::cleanup() {
 
   {
     GCTraceTime(Debug, gc, phases) debug("Finalize Concurrent Mark Cleanup", _gc_timer_cm);
+    // todo 区域排序，建立候选区域
     policy->record_concurrent_mark_cleanup_end(needs_remembered_set_rebuild());
   }
 }
@@ -1747,6 +1755,7 @@ private:
   void do_entry(void* entry) const {
     _task->increment_refs_reached();
     oop const obj = cast_to_oop(entry);
+    // 对象引用置灰
     _task->make_reference_grey(obj);
   }
 
@@ -1756,6 +1765,7 @@ public:
 
   virtual void do_buffer(void** buffer, size_t size) {
     for (size_t i = 0; i < size; ++i) {
+        //遍历buffer
       do_entry(buffer[i]);
     }
   }
@@ -1788,6 +1798,7 @@ public:
     }
 
     do {
+        // 超长时间，表示不标记完不罢休
       task->do_marking_step(1000000000.0 /* something very large */,
                             true         /* do_termination       */,
                             false        /* is_serial            */);
@@ -1810,6 +1821,7 @@ void G1ConcurrentMark::finalize_marking() {
 
   // this is remark, so we'll use up all active threads
   uint active_workers = _g1h->workers()->active_workers();
+  // 校验是否stw
   set_concurrency_and_phase(active_workers, false /* concurrent */);
   // Leave _parallel_marking_threads at it's
   // value originally calculated in the G1ConcurrentMark
@@ -1819,10 +1831,12 @@ void G1ConcurrentMark::finalize_marking() {
   {
     StrongRootsScope srs(active_workers);
 
+    // 任务实现
     G1CMRemarkTask remarkTask(this, active_workers);
     // We will start all available threads, even if we decide that the
     // active_workers will be fewer. The extra ones will just bail out
     // immediately.
+    // 调用
     _g1h->workers()->run_task(&remarkTask);
   }
 
@@ -2261,6 +2275,7 @@ void G1CMTask::move_entries_to_global_stack() {
 
   size_t n = 0;
   G1TaskQueueEntry task_entry;
+  // 一次取出1023条task
   while (n < G1CMMarkStack::EntriesPerChunk && _task_queue->pop_local(task_entry)) {
     buffer[n] = task_entry;
     ++n;
@@ -2270,6 +2285,7 @@ void G1CMTask::move_entries_to_global_stack() {
   }
 
   if (n > 0) {
+      // 加入全局标记栈
     if (!_cm->mark_stack_push(buffer)) {
       set_has_aborted();
     }
@@ -2325,6 +2341,7 @@ void G1CMTask::drain_local_queue(bool partially) {
     G1TaskQueueEntry entry;
     bool ret = _task_queue->pop_local(entry);
     while (ret) {
+        // 扫描
       scan_task_entry(entry);
       if (_task_queue->size() <= target_size || has_aborted()) {
         ret = false;
@@ -2381,11 +2398,13 @@ void G1CMTask::drain_satb_buffers() {
   // very counter productive if it did that. :-)
   _draining_satb_buffers = true;
 
+  // SATB 处理闭包实现
   G1CMSATBBufferClosure satb_cl(this, _g1h);
   SATBMarkQueueSet& satb_mq_set = G1BarrierSet::satb_mark_queue_set();
 
   // This keeps claiming and applying the closure to completed buffers
   // until we run out of buffers or we need to abort.
+  // 循环至buffer为空
   while (!has_aborted() &&
          satb_mq_set.apply_closure_to_completed_buffer(&satb_cl)) {
     abort_marking_if_regular_check_fail();
@@ -2447,42 +2466,42 @@ bool G1ConcurrentMark::try_stealing(uint worker_id, G1TaskQueueEntry& task_entry
     The data structures that it uses to do marking work are the
     following:
 
-      (1) Marking Bitmap. If there are grey objects that appear only
-      on the bitmap (this happens either when dealing with an overflow
-      or when the concurrent start pause has simply marked the roots
-      and didn't push them on the stack), then tasks claim heap
-      regions whose bitmap they then scan to find grey objects. A
-      global finger indicates where the end of the last claimed region
-      is. A local finger indicates how far into the region a task has
-      scanned. The two fingers are used to determine how to grey an
-      object (i.e. whether simply marking it is OK, as it will be
-      visited by a task in the future, or whether it needs to be also
-      pushed on a stack).
+      (1) Marking Bitmap.如果有灰色物体只出现
+      位图上（这种情况发生在处理溢出时
+      或者当并发启动暂停只是标记了根时
+      并且没有将它们压入堆栈），然后任务声明堆
+      然后他们扫描其位图以查找灰色对象的区域。 A
+      全局手指指示最后声明的区域的末尾
+      是。本地手指指示任务进入该区域的距离
+      已扫描。两个手指用于确定如何灰化
+      对象（即是否简单地标记它就可以了，因为它将是
+      将来的任务访问过，或者是否也需要
+      压入堆栈）。
 
-      (2) Local Queue. The local queue of the task which is accessed
-      reasonably efficiently by the task. Other tasks can steal from
-      it when they run out of work. Throughout the marking phase, a
-      task attempts to keep its local queue short but not totally
-      empty, so that entries are available for stealing by other
-      tasks. Only when there is no more work, a task will totally
-      drain its local queue.
+      (2) Local Queue. 被访问任务的本地队列
+      任务的合理效率。其他任务可以窃取
+      当他们失业时。在整个标记阶段，
+      任务尝试保持其本地队列较短，但并非完全如此
+      空，这样条目就可以被其他人窃取
+      任务。只有当没有更多的工作时，任务才会完全
+      排空其本地队列。
 
-      (3) Global Mark Stack. This handles local queue overflow. During
-      marking only sets of entries are moved between it and the local
-      queues, as access to it requires a mutex and more fine-grain
-      interaction with it which might cause contention. If it
-      overflows, then the marking phase should restart and iterate
-      over the bitmap to identify grey objects. Throughout the marking
-      phase, tasks attempt to keep the global mark stack at a small
-      length but not totally empty, so that entries are available for
-      popping by other tasks. Only when there is no more work, tasks
-      will totally drain the global mark stack.
+      (3) Global Mark Stack. 这可以处理本地队列溢出。期间
+      仅标记条目集在它和本地之间移动
+      队列，因为访问它需要互斥锁和更细粒度的
+      与它的交互可能会导致争用。如果它
+      溢出，那么标记阶段应该重新开始并迭代
+      在位图上识别灰色对象。整个标记过程
+      阶段，任务尝试将全局标记堆栈保持在一个较小的值
+      长度但不完全为空，因此条目可用于
+      被其他任务弹出。仅当不再有工作、任务时
+      将完全耗尽全局标记堆栈。
 
-      (4) SATB Buffer Queue. This is where completed SATB buffers are
-      made available. Buffers are regularly removed from this queue
-      and scanned for roots, so that the queue doesn't get too
-      long. During remark, all completed buffers are processed, as
-      well as the filled in parts of any uncompleted buffers.
+      (4) SATB Buffer Queue. 这是完成的 SATB 缓冲区所在的位置
+      可用。缓冲区会定期从此队列中删除
+      并扫描根，这样队列就不会太长
+      长的。在备注期间，所有已完成的缓冲区都会被处理，如下所示
+      以及任何未完成缓冲区的填充部分。
 
     The do_marking_step() method tries to abort when the time target
     has been reached. There are a few other cases when the
@@ -2602,7 +2621,9 @@ void G1CMTask::do_marking_step(double time_target_ms,
     // 处理SATB队列
   drain_satb_buffers();
   // ...then partially drain the local queue and the global stack
+  // 本地队列进行广度优先遍历扫描
   drain_local_queue(true);
+  // 从全局队列中获取，并进行 drain_local_queue
   drain_global_stack(true);
 
   do {
@@ -2623,6 +2644,7 @@ void G1CMTask::do_marking_step(double time_target_ms,
       // through scanning this region. In this case, _finger points to
       // the address where we last found a marked object. If this is a
       // fresh region, _finger points to start().
+      // 从local finger开始到region结束
       MemRegion mr = MemRegion(_finger, _region_limit);
 
       assert(!_curr_region->is_humongous() || mr.start() == _curr_region->bottom(),
@@ -2637,9 +2659,12 @@ void G1CMTask::do_marking_step(double time_target_ms,
       // that is left.
       // If the iteration is successful, give up the region.
       if (mr.is_empty()) {
+          // 如果为空，放弃该region
         giveup_current_region();
         abort_marking_if_regular_check_fail();
       } else if (_curr_region->is_humongous() && mr.start() == _curr_region->bottom()) {
+          // 是大对象，并且在bitmap中，把local finger 移动到当前，进行遍历，广度优先遍历，全局标记栈遍历一套
+          // 然后放弃该region
         if (_mark_bitmap->is_marked(mr.start())) {
           // The object is marked - apply the closure
           bitmap_closure.do_addr(mr.start());
@@ -2649,6 +2674,7 @@ void G1CMTask::do_marking_step(double time_target_ms,
         giveup_current_region();
         abort_marking_if_regular_check_fail();
       } else if (_mark_bitmap->iterate(&bitmap_closure, mr)) {
+          // 扫描mr的，并把local finger 移动到当前，进行遍历，广度优先遍历，全局标记栈遍历一套
         giveup_current_region();
         abort_marking_if_regular_check_fail();
       } else {
@@ -2680,6 +2706,7 @@ void G1CMTask::do_marking_step(double time_target_ms,
 
     // We then partially drain the local queue and the global stack.
     // (Do we really need this?)
+      // 再次处理本地队列和全局标记栈。实际上这是为了后面的加速，标记发生时，会有新的对象进来。
     drain_local_queue(true);
     drain_global_stack(true);
 
@@ -2726,10 +2753,12 @@ void G1CMTask::do_marking_step(double time_target_ms,
 
   // Since we've done everything else, we can now totally drain the
   // local queue and global stack.
+    // 这个时候需要把本地队列和全局标记栈全部处理掉。
   drain_local_queue(false);
   drain_global_stack(false);
 
   // Attempt at work stealing from other task's queues.
+    // 尝试从其他的任务的队列中偷窃任务，这是为了更好的性能
   if (do_stealing && !has_aborted()) {
     // We have not aborted. This means that we have finished all that
     // we could. Let's try to do some stealing...

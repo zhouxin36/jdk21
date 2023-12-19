@@ -78,6 +78,7 @@ class Klass : public Metadata {
     InstanceClassLoaderKlassKind,
     // 堆栈块特殊实例类型
     InstanceStackChunkKlassKind,
+    // 原始类型的数组
     TypeArrayKlassKind,
     ObjArrayKlassKind,
     UnknownKlassKind

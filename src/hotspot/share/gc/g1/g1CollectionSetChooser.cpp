@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2001, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -95,6 +95,7 @@ class G1BuildCandidateRegionsTask : public WorkerTask {
     void set(uint idx, HeapRegion* hr) {
       assert(idx < _max_size, "Index %u out of bounds %u", idx, _max_size);
       assert(_data[idx]._r == nullptr, "Value must not have been set.");
+      // 设置gc区域分数
       _data[idx] = CandidateInfo(hr, hr->calc_gc_efficiency());
     }
 
@@ -131,6 +132,7 @@ class G1BuildCandidateRegionsTask : public WorkerTask {
       }
       assert(_cur_chunk_idx < _cur_chunk_end, "Must be");
 
+      // 调用
       _array->set(_cur_chunk_idx, hr);
 
       _cur_chunk_idx++;
@@ -152,6 +154,7 @@ class G1BuildCandidateRegionsTask : public WorkerTask {
       // alloc region (we should not consider those for collection
       // before we fill them up).
       if (should_add(r) && !G1CollectedHeap::heap()->is_old_gc_alloc_region(r)) {
+          // 老年代
         add_region(r);
       } else if (r->is_old()) {
         // Keep remembered sets for humongous regions, otherwise clean them out.
@@ -199,6 +202,7 @@ class G1BuildCandidateRegionsTask : public WorkerTask {
       return;
     }
 
+    // 获取G1HeapWastePercent允许浪费空间比例
     size_t allowed_waste = p->allowed_waste_in_collection_set();
     uint max_to_prune = num_candidates - min_old_cset_length;
 
@@ -233,6 +237,7 @@ public:
     _result(max_num_regions, chunk_size, num_workers) { }
 
   void work(uint worker_id) {
+      // 调用
     G1BuildCandidateRegionsClosure cl(&_result);
     _g1h->heap_region_par_iterate_from_worker_offset(&cl, &_hrclaimer, worker_id);
     update_totals(cl.regions_added());
@@ -240,6 +245,7 @@ public:
 
   void sort_and_prune_into(G1CollectionSetCandidates* candidates) {
     _result.sort_by_efficiency();
+    // 通过G1HeapWastePercent浪费空间进行裁剪
     prune(_result.array());
     candidates->set_candidates_from_marking(_result.array(),
                                             _num_regions_added);
@@ -262,9 +268,12 @@ void G1CollectionSetChooser::build(WorkerThreads* workers, uint max_num_regions,
   uint num_workers = workers->active_workers();
   uint chunk_size = calculate_work_chunk_size(num_workers, max_num_regions);
 
+  // 调用
+  // 然后调用G1BuildCandidateRegionsClosure
   G1BuildCandidateRegionsTask cl(max_num_regions, chunk_size, num_workers);
   workers->run_task(&cl, num_workers);
 
+  // todo 对计算好分数得区域进行排序个裁剪
   cl.sort_and_prune_into(candidates);
   candidates->verify();
 }

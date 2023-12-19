@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2001, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -136,6 +136,7 @@ void HeapRegion::clear_cardtable() {
 }
 
 double HeapRegion::calc_gc_efficiency() {
+    // todo 区域排序计算数据
   // GC efficiency is the ratio of how much space would be
   // reclaimed over how long we predict it would take to reclaim it.
   G1Policy* policy = G1CollectedHeap::heap()->policy();
@@ -144,6 +145,7 @@ double HeapRegion::calc_gc_efficiency() {
   // a mixed gc because the region will only be evacuated during a
   // mixed gc.
   double region_elapsed_time_ms = policy->predict_region_total_time_ms(this, false /* for_young_only_phase */);
+    // 计算可回收的字节数/回收的预测速度
   return (double)reclaimable_bytes() / region_elapsed_time_ms;
 }
 

@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -179,10 +179,12 @@ class G1RebuildRSAndScrubTask : public WorkerTask {
     bool scan_and_scrub_to_pb(HeapRegion* hr, HeapWord* start, HeapWord* const limit) {
 
       while (start < limit) {
+          // 在map中，继续扫描
         if (_bitmap->is_marked(start)) {
           //  Live object, need to scan to rebuild remembered sets for this object.
           start += scan_object(hr, start);
         } else {
+            // 不在map，清理数据
           // Found dead object (which klass has potentially been unloaded). Scrub to next
           // marked object and continue.
           start = scrub_to_next_live(hr, start, limit);
@@ -219,6 +221,7 @@ class G1RebuildRSAndScrubTask : public WorkerTask {
       log_trace(gc, marking)("Scrub and rebuild region: " HR_FORMAT " pb: " PTR_FORMAT " TARS: " PTR_FORMAT,
                              HR_FORMAT_PARAMS(hr), p2i(pb), p2i(_cm->top_at_rebuild_start(hr->hrm_index())));
 
+      // 扫描并清理
       if (scan_and_scrub_to_pb(hr, hr->bottom(), pb)) {
         log_trace(gc, marking)("Scan and scrub aborted for region: %u", hr->hrm_index());
         return true;
@@ -296,6 +299,7 @@ class G1RebuildRSAndScrubTask : public WorkerTask {
       }
 
       bool mark_aborted;
+        // 是老年代，才会清理
       if (hr->needs_scrubbing()) {
         // This is a region with potentially unparsable (dead) objects.
         mark_aborted = scan_and_scrub_region(hr, pb);

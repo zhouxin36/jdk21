@@ -320,20 +320,23 @@ static int compare_region_idx(const uint a, const uint b) {
 void G1CollectionSet::finalize_old_part(double time_remaining_ms) {
   double non_young_start_time_sec = os::elapsedTime();
 
+  // todo 开始 5、启动混合收集
   if (collector_state()->in_mixed_phase()) {
     candidates()->verify();
 
     G1CollectionCandidateRegionList initial_old_regions;
     assert(_optional_old_regions.length() == 0, "must be");
 
+    // 收集候选区域
+    // marking_regions 按 efficiency 递减的候选区域列表
     _policy->select_candidates_from_marking(&candidates()->marking_regions(),
                                             time_remaining_ms,
                                             &initial_old_regions,
                                             &_optional_old_regions);
 
-    // Move initially selected old regions to collection set directly.
+    // 将最初选择的旧区域直接移动到集合集中。
     move_candidates_to_collection_set(&initial_old_regions);
-    // Only prepare selected optional regions for now.
+    // 目前仅准备选定的可选区域。
     prepare_optional_regions(&_optional_old_regions);
 
     candidates()->verify();

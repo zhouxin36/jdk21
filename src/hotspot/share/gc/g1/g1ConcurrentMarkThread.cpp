@@ -186,10 +186,10 @@ bool G1ConcurrentMarkThread::phase_mark_loop() {
       if (subphase_preclean()) return true;
     }
 
-    // Subphase 3: Wait for Remark.
+    // Subphase 3: 等待再标记.
     if (subphase_delay_to_keep_mmu_before_remark()) return true;
 
-    // Subphase 4: Remark pause
+    // Subphase 4: 再标记
     if (subphase_remark()) return true;
 
     // Check if we need to restart the marking loop.
@@ -231,6 +231,7 @@ bool G1ConcurrentMarkThread::subphase_delay_to_keep_mmu_before_remark() {
 bool G1ConcurrentMarkThread::subphase_remark() {
   ConcurrentGCBreakpoints::at("BEFORE MARKING COMPLETED");
   VM_G1PauseRemark op;
+  // 调用VM_G1PauseRemark 实现 VM_G1PauseRemark::work
   VMThread::execute(&op);
   return _cm->has_aborted();
 }
@@ -289,16 +290,16 @@ void G1ConcurrentMarkThread::concurrent_mark_cycle_do() {
   // Phase 1: 根扫描子阶段
   if (phase_scan_root_regions()) return;
 
-  // Phase 2: 并发子标记
+  // Phase 2: 并发子标记、再标记
   if (phase_mark_loop()) return;
 
-  // Phase 3: 再标记并清除死对象.
+  // Phase 3:重建记忆集并清除死对象。
   if (phase_rebuild_and_scrub()) return;
 
   // Phase 4: Wait for Cleanup.
   if (phase_delay_to_keep_mmu_before_cleanup()) return;
 
-  // Phase 5: Cleanup pause
+  // Phase 5: Cleanup pause 更新记忆集
   if (phase_cleanup()) return;
 
   // Phase 6: Clear CLD claimed marks.

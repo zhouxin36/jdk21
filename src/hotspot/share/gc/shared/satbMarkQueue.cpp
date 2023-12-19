@@ -205,6 +205,7 @@ void SATBMarkQueueSet::set_active_all_threads(bool active, bool expected_active)
 }
 
 bool SATBMarkQueueSet::apply_closure_to_completed_buffer(SATBBufferClosure* cl) {
+    // 获取buffer
   BufferNode* nd = get_completed_buffer();
   if (nd != nullptr) {
     void **buf = BufferNode::make_buffer_from_node(nd);

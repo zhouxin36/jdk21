@@ -1252,7 +1252,9 @@ void G1Policy::decide_on_concurrent_start_pause() {
 void G1Policy::record_concurrent_mark_cleanup_end(bool has_rebuilt_remembered_sets) {
   bool mixed_gc_pending = false;
   if (has_rebuilt_remembered_sets) {
+      // 调用
     G1CollectionSetChooser::build(_g1h->workers(), _g1h->num_regions(), candidates());
+      // 只要排序得集合不为空，就启动混合收集
     mixed_gc_pending = next_gc_should_be_mixed("request young-only gcs");
   }
 

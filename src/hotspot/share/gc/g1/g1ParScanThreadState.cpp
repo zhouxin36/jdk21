@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -470,6 +470,7 @@ oop G1ParScanThreadState::do_copy_to_survivor_space(G1HeapRegionAttr const regio
     if (obj_ptr == nullptr) {
       // This will either forward-to-self, or detect that someone else has
       // installed a forwarding pointer.
+      // todo 开始：FGC 1、疏散失败
       return handle_evacuation_failure_par(old, old_mark, word_sz);
     }
   }
@@ -622,21 +623,25 @@ oop G1ParScanThreadState::handle_evacuation_failure_par(oop old, markWord m, siz
 
   oop forward_ptr = old->forward_to_atomic(old, m, memory_order_relaxed);
   if (forward_ptr == nullptr) {
+      // 对象复制失败，对象指针指向自己
     // Forward-to-self succeeded. We are the "owner" of the object.
     HeapRegion* r = _g1h->heap_region_containing(old);
 
+    // 记录区域信息到 _evac_failure_regions
     if (_evac_failure_regions->record(r->hrm_index())) {
       _g1h->hr_printer()->evac_failure(r);
     }
 
     // Mark the failing object in the marking bitmap and later use the bitmap to handle
     // evacuation failure recovery.
+    // 在marking bitmap中标记失败的对象，然后使用该位图来处理疏散失败恢复。
     _g1h->mark_evac_failure_object(_worker_id, old, word_sz);
 
     _preserved_marks->push_if_necessary(old, m);
 
     ContinuationGCSupport::transform_stack_chunk(old);
 
+    // 统计疏散失败信息
     _evacuation_failed_info.register_copy_failure(word_sz);
 
     // For iterating objects that failed evacuation currently we can reuse the
