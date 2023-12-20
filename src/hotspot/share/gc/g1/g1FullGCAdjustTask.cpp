@@ -99,12 +99,14 @@ void G1FullGCAdjustTask::work(uint worker_id) {
     AlwaysTrueClosure always_alive;
     _weak_proc_task.work(worker_id, &always_alive, &_adjust);
   }
-
+    // 处理根对象，根对象仅仅需要更新指针位置
   CLDToOopClosure adjust_cld(&_adjust, ClassLoaderData::_claim_stw_fullgc_adjust);
   CodeBlobToOopClosure adjust_code(&_adjust, CodeBlobToOopClosure::FixRelocations);
   _root_processor.process_all_roots(&_adjust, &adjust_cld, &adjust_code);
 
   // Now adjust pointers region by region
+    // 处理每一个分区，对每一个活跃对象更新指针，并且要更新对象的引用关系RSet。与串行回收
+    // 中提到的一样，这里对象并没有移动，它们的指针指向对象将要在的新位置。
   G1AdjustRegionClosure blk(collector(), worker_id);
   G1CollectedHeap::heap()->heap_region_par_iterate_from_worker_offset(&blk, &_hrclaimer, worker_id);
   log_task("Adjust task", worker_id, start);

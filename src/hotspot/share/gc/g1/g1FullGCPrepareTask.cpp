@@ -76,6 +76,7 @@ void G1FullGCPrepareTask::work(uint worker_id) {
   // the compaction queues provided by the associate compaction point.
   {
     G1FullGCCompactionPoint* compaction_point = collector()->compaction_point(worker_id);
+    // 并行计算对象新的位置
     G1CalculatePointersClosure closure(collector(), compaction_point);
 
     for (GrowableArrayIterator<HeapRegion*> it = compaction_point->regions()->begin();
@@ -88,6 +89,8 @@ void G1FullGCPrepareTask::work(uint worker_id) {
     // there are
     // - any regions in queue, so no free ones either.
     // - and the current region is not the last one in the list.
+      // 根据上面的分析，因为并行计算对象会压缩对象，所以可以判断是否有需要释放的分区，
+      // 如果没有要释放的分区，说明原来有几个分区，这个线程处理之后还有几个分区。
     if (compaction_point->has_regions() &&
         compaction_point->current_region() != compaction_point->regions()->last()) {
       set_has_free_compaction_targets();

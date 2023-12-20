@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2017, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -203,18 +203,21 @@ void G1FullCollector::prepare_collection() {
 
 void G1FullCollector::collect() {
   G1CollectedHeap::start_codecache_marking_cycle_if_inactive(false /* concurrent_mark_start */);
-
+  // todo 开始: 并行FGC
+  // 并行标记，从Root Set出发，这里还会对引用处理
+  // 并行标记活跃对象
   phase1_mark_live_objects();
   verify_after_marking();
 
-  // Don't add any more derived pointers during later phases
+  // 这是针对C2的优化，记录对象的派生关系，开始GC之前先暂停更新
   deactivate_derived_pointers();
-
+  // 计算对象的新地址
   phase2_prepare_compaction();
 
   if (has_compaction_targets()) {
+    // 更新引用对象地址
     phase3_adjust_pointers();
-
+    // 并行压缩
     phase4_do_compaction();
   } else {
     // All regions have a high live ratio thus will not be compacted.
@@ -290,7 +293,9 @@ void G1FullCollector::phase1_mark_live_objects() {
   GCTraceTime(Info, gc, phases) info("Phase 1: Mark live objects", scope()->timer());
 
   {
-    // Do the actual marking.
+      // 1、根扫描
+      // 只需要处理JAVA根，不需要satb处理
+      // 调用闭包 G1MarkAndPushClosure
     G1FullGCMarkTask marking_task(this);
     run_task(&marking_task);
   }
@@ -301,6 +306,7 @@ void G1FullCollector::phase1_mark_live_objects() {
     GCTraceTime(Debug, gc, phases) debug("Phase 1: Reference Processing", scope()->timer());
     // Process reference objects found during marking.
     ReferenceProcessorPhaseTimes pt(scope()->timer(), reference_processor()->max_num_queues());
+    // 引用遍历扫描
     G1FullGCRefProcProxyTask task(*this, reference_processor()->max_num_queues());
     const ReferenceProcessorStats& stats = reference_processor()->process_discovered_references(task, pt);
     scope()->tracer()->report_gc_reference_stats(stats);
@@ -311,12 +317,14 @@ void G1FullCollector::phase1_mark_live_objects() {
   }
 
   // Weak oops cleanup.
+  // 弱引用处理
   {
     GCTraceTime(Debug, gc, phases) debug("Phase 1: Weak Processing", scope()->timer());
     WeakProcessor::weak_oops_do(_heap->workers(), &_is_alive, &do_nothing_cl, 1);
   }
 
   // Class unloading and cleanup.
+  // 卸载类元数据
   if (ClassUnloading) {
     GCTraceTime(Debug, gc, phases) debug("Phase 1: Class Unloading and Cleanup", scope()->timer());
     CodeCache::UnloadingScope unloading_scope(&_is_alive);
@@ -338,17 +346,23 @@ void G1FullCollector::phase1_mark_live_objects() {
 void G1FullCollector::phase2_prepare_compaction() {
   GCTraceTime(Info, gc, phases) info("Phase 2: Prepare compaction", scope()->timer());
 
+  // 准备compaction queues
   phase2a_determine_worklists();
 
   if (!has_compaction_targets()) {
     return;
   }
-
+// 并行处理
+// G1FullGCPrepareTask 实现
   bool has_free_compaction_targets = phase2b_forward_oops();
 
   // Try to avoid OOM immediately after Full GC in case there are no free regions
   // left after determining the result locations (i.e. this phase). Prepare to
   // maximally compact the tail regions of the compaction queues serially.
+    /*这一步的处理是因为并行处理之后，发现所有的线程处理完之后不存在一个完全空闲的分区，
+   * 此时的状态就是每个线程除了最后一个分区，处理的其他分区都是满的，为
+   * 了降低内存碎片，可以把所有线程处理的最后的一个分区合并，这个合并是串行处理的。
+   * 这完全是为了优化，防止OOM */
   if (scope()->do_maximal_compaction() || !has_free_compaction_targets) {
     phase2c_prepare_serial_compaction();
 
@@ -476,6 +490,7 @@ void G1FullCollector::phase4_do_compaction() {
   run_task(&task);
 
   // Serial compact to avoid OOM when very few free regions.
+    // 这一步也是根据第二步中的结果，如果进行了串行压缩，则队尾分区进行一次串行处理。
   if (serial_compaction_point()->has_regions()) {
     task.serial_compaction();
   }
