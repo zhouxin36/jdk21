@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2003, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -1320,6 +1320,7 @@ void JvmtiExport::at_single_stepping_point(JavaThread *thread, Method* method, a
     if (state->is_pending_step_for_earlyret()) {
       state->process_pending_step_for_earlyret();
     }
+    // 调用
     JvmtiExport::post_single_step(thread, mh(), location);
   }
 }
@@ -1977,6 +1978,7 @@ void JvmtiExport::post_single_step(JavaThread *thread, Method* method, address l
       JvmtiEnv *env = ets->get_env();
       JvmtiLocationEventMark jem(thread, mh, location);
       JvmtiJavaThreadEventTransition jet(thread);
+      // 回调函数，最终调用 JvmtiEnv::SuspendThread
       jvmtiEventSingleStep callback = env->callbacks()->SingleStep;
       if (callback != nullptr) {
         (*callback)(env->jvmti_external(), jem.jni_env(), jem.jni_thread(),

@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -59,6 +59,7 @@ inline bool G1FullGCMarker::mark_object(oop obj) {
   }
 
   // Check if deduplicatable string.
+  // 字符串去重
   if (StringDedup::is_enabled() &&
       java_lang_String::is_instance(obj) &&
       G1StringDedup::is_candidate_from_mark(obj)) {

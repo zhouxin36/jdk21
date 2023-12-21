@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 1997, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -355,6 +355,8 @@ void SafepointSynchronize::begin() {
   EventSafepointBegin begin_event;
   SafepointTracing::begin(VMThread::vm_op_type());
 
+  // 调用G1CollectedHeap::safepoint_synchronize_begin()
+  // 最后调用SuspendibleThreadSet::synchronize(); 设置_suspend_all=true ，暂停所有
   Universe::heap()->safepoint_synchronize_begin();
 
   // By getting the Threads_lock, we assure that no threads are about to start or

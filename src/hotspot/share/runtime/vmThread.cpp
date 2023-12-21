@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 1998, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -389,6 +389,12 @@ static void self_destruct_if_needed() {
 }
 
 void VMThread::inner_execute(VM_Operation* op) {
+    // todo 开始: 安全点、VM执行
+    // 解释线程进入安全点在 入口 InterpreterRuntime::at_safepoint(JavaThread* current)
+    //               最终调用 JvmtiEnv::SuspendThread(jthread thread) 调用操作系统的API
+    // 编译线程进入安全点 使用SIGSEGV信号
+    // 执行的本地代码不会暂停，本地代码返回java代码会暂停
+
   assert(Thread::current()->is_VM_thread(), "Must be the VM thread");
 
   VM_Operation* prev_vm_operation = nullptr;
