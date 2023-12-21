@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2015, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -69,8 +69,10 @@ bool InstanceRefKlass::try_discover(oop obj, ReferenceType type, OopClosureType*
   if (rd != nullptr) {
     oop referent = load_referent(obj, type);
     if (referent != nullptr) {
+        // 如果GC已经标记了，就不用再继续了，已经是强引用了
       if (!referent->is_gc_marked()) {
         // Only try to discover if not yet marked.
+        // ReferenceProcessor::discover_reference
         return rd->discover_reference(obj, type);
       }
     }
@@ -81,6 +83,7 @@ bool InstanceRefKlass::try_discover(oop obj, ReferenceType type, OopClosureType*
 template <typename T, class OopClosureType, class Contains>
 void InstanceRefKlass::oop_oop_iterate_discovery(oop obj, ReferenceType type, OopClosureType* closure, Contains& contains) {
   // Try to discover reference and return if it succeeds.
+  // todo 开始: 软、弱、虚引用发现
   if (try_discover<T>(obj, type, closure)) {
     return;
   }

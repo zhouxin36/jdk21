@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2001, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -181,7 +181,7 @@ void ReferenceProcessor::verify_total_count_zero(DiscoveredList lists[], const c
 
 ReferenceProcessorStats ReferenceProcessor::process_discovered_references(RefProcProxyTask& proxy_task,
                                                                           ReferenceProcessorPhaseTimes& phase_times) {
-
+ // todo 开始: 软、弱、虚引用处理
   double start_time = os::elapsedTime();
 
   // Stop treating discovered references specially.
@@ -948,9 +948,12 @@ bool ReferenceProcessor::discover_reference(oop obj, ReferenceType rt) {
 
   // We only discover references whose referents are not (yet)
   // known to be strongly reachable.
+  // 检测引用是否可达，可达无需处理
   if (is_alive_non_header() != nullptr) {
     verify_referent(obj);
     oop referent = java_lang_ref_Reference::unknown_referent_no_keepalive(obj);
+    // G1STWIsAliveClosure
+    // 对象所在分区不在CSet中或者对象在CSet但没有被复制到新的分区
     if (is_alive_non_header()->do_object_b(referent)) {
       return false;  // referent is reachable
     }
@@ -963,6 +966,7 @@ bool ReferenceProcessor::discover_reference(oop obj, ReferenceType rt) {
     // time-stamp policies advance the soft-ref clock only
     // at a full collection cycle, this is always currently
     // accurate.
+    // 服务器模式LRUMaxHeapPolicy 最近最少使用算法
     if (!_current_soft_ref_policy->should_clear_reference(obj, _soft_ref_timestamp_clock)) {
       return false;
     }
@@ -986,6 +990,7 @@ bool ReferenceProcessor::discover_reference(oop obj, ReferenceType rt) {
   }
 
   // Get the right type of discovered queue head.
+  // 加入到 Discover 队列
   DiscoveredList* list = get_discovered_list(rt);
   add_to_discovered_list(*list, obj, discovered_addr);
 

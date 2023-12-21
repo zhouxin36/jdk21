@@ -308,6 +308,7 @@ void G1FullCollector::phase1_mark_live_objects() {
     ReferenceProcessorPhaseTimes pt(scope()->timer(), reference_processor()->max_num_queues());
     // 引用遍历扫描
     G1FullGCRefProcProxyTask task(*this, reference_processor()->max_num_queues());
+    // 软 弱 虚引用处理
     const ReferenceProcessorStats& stats = reference_processor()->process_discovered_references(task, pt);
     scope()->tracer()->report_gc_reference_stats(stats);
     pt.print_all_references();
