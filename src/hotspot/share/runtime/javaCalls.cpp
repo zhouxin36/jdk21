@@ -357,6 +357,7 @@ void JavaCalls::call_helper(JavaValue* result, const methodHandle& method, JavaC
 
   CompilationPolicy::compile_if_required(method, CHECK);
 
+  // todo 开始:方法栈创建
   // Since the call stub sets up like the interpreter we call the from_interpreted_entry
   // so we can go compiled via a i2c. Otherwise initial entry method will always
   // run interpreted.

@@ -1213,6 +1213,7 @@ void Method::link_method(const methodHandle& h_method, TRAPS) {
   assert(this == h_method(), "wrong h_method()" );
 
   assert(adapter() == nullptr, "init'd to null");
+  // todo 方法栈：获取回调函数地址，通过MethodKind方法类型获取不同地址
   address entry = Interpreter::entry_for_method(h_method);
   assert(entry != nullptr, "interpreter entry must be non-null");
   // Sets both _i2i_entry and _from_interpreted_entry
