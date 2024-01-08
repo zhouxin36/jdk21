@@ -830,7 +830,7 @@ void InterpreterMacroAssembler::dispatch_epilog(TosState state, int step) {
   dispatch_next(state, step);
 }
 
-void InterpreterMacroAssembler::dispatch_base(TosState state,
+void InterpreterMacroAssembler::dispatch_base(TosState state,// 表示栈顶缓存状态
                                               address* table,
                                               bool verifyoop,
                                               bool generate_poll) {
@@ -859,6 +859,7 @@ void InterpreterMacroAssembler::dispatch_base(TosState state,
     testb(Address(r15_thread, JavaThread::polling_word_offset()), SafepointMechanism::poll_bit());
 
     jccb(Assembler::zero, no_safepoint);
+    // 获取当前栈顶状态字节码转发表的地址，保存到rscratch1
     lea(rscratch1, ExternalAddress((address)safepoint_table));
     jmpb(dispatch);
   }
@@ -866,6 +867,8 @@ void InterpreterMacroAssembler::dispatch_base(TosState state,
   bind(no_safepoint);
   lea(rscratch1, ExternalAddress((address)table));
   bind(dispatch);
+    // 跳转到字节码对应的入口执行机器码指令
+    // address = rscratch1 + rbx * 8
   jmp(Address(rscratch1, rbx, Address::times_8));
 
 #else
@@ -902,12 +905,20 @@ void InterpreterMacroAssembler::dispatch_only_noverify(TosState state) {
   dispatch_base(state, Interpreter::normal_table(state), false);
 }
 
-
+// 从generate_fixed_frame()函数生成Java方法调用栈帧的时候，
+// 如果当前是第一次调用，那么_bcp_register指向的是字节码的首地址，
+// 即第一个字节码，此时的step参数为0
 void InterpreterMacroAssembler::dispatch_next(TosState state, int step, bool generate_poll) {
   // load next bytecode (load before advancing _bcp_register to prevent AGI)
   load_unsigned_byte(rbx, Address(_bcp_register, step));
   // advance _bcp_register
+    // 在当前字节码的位置，指针向前移动step宽度，
+    // 获取地址上的值，这个值是Opcode（范围1~202），存储到rbx
+    // step的值由字节码指令和它的操作数共同决定
+    // 自增_bcp_register供下一次字节码分派使用
   increment(_bcp_register, step);
+  // 返回当前栈顶状态的所有字节码入口点
+  // _table是字节码分发表
   dispatch_base(state, Interpreter::dispatch_table(state), true, generate_poll);
 }
 

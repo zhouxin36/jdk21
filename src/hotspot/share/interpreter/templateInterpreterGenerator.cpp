@@ -177,6 +177,7 @@ void TemplateInterpreterGenerator::generate_all() {
 
 
 
+  // todo 方法栈：初始化，生成method_entry方法
 #define method_entry(kind)                                                                          \
   { CodeletMark cm(_masm, "method entry point (kind = " #kind ")");                                 \
     Interpreter::_entry_table[Interpreter::kind] = generate_method_entry(Interpreter::kind, false); \

@@ -623,21 +623,40 @@ void TemplateInterpreterGenerator::lock_method() {
 //      rdx: cp cache
 void TemplateInterpreterGenerator::generate_fixed_frame(bool native_call) {
   // initialize fixed part of activation frame
+  // 把返回地址紧接着局部变量区保存
   __ push(rax);        // save return address
+  // 为Java方法创建栈帧
   __ enter();          // save old & set new rbp
+  // 保存调用者的栈顶地址
   __ push(rbcp);        // set sender sp
+  // 暂时将last_sp属性的值设置为NULL_WORD
   __ push(NULL_WORD); // leave last_sp as null
+  // 获取ConstMethod*并保存到rbcp中
   __ movptr(rbcp, Address(rbx, Method::const_offset()));      // get ConstMethod*
+  // 保存Java方法字节码的地址到rbcp中
   __ lea(rbcp, Address(rbcp, ConstMethod::codes_offset())); // get codebase
+  // 保存Method*到堆栈上
   __ push(rbx);        // save Method*
   // Get mirror and store it in the frame as GC root for this Method*
   __ load_mirror(rdx, rbx, rscratch2);
   __ push(rdx);
+    // ProfileInterpreter属性的默认值为true，
+    // 表示需要对解释执行的方法进行相关信息的统计
   if (ProfileInterpreter) {
     Label method_data_continue;
+      // MethodData结构基础是ProfileData，
+      // 记录函数运行状态下的数据
+      // MethodData里面分为3个部分，
+      // 一个是函数类型等运行相关统计数据，
+      // 一个是参数类型运行相关统计数据，
+      // 还有一个是extra扩展区保存着
+      // deoptimization的相关信息
+      // 获取Method中的_method_data属性的值并保存到rdx中
     __ movptr(rdx, Address(rbx, in_bytes(Method::method_data_offset())));
     __ testptr(rdx, rdx);
     __ jcc(Assembler::zero, method_data_continue);
+      // 执行到这里，说明_method_data已经进行了初始化，
+      // 通过MethodData来获取_data属性的值并存储到rdx中
     __ addptr(rdx, in_bytes(MethodData::data_offset()));
     __ bind(method_data_continue);
     __ push(rdx);      // set the mdp (method data pointer)
@@ -645,9 +664,13 @@ void TemplateInterpreterGenerator::generate_fixed_frame(bool native_call) {
     __ push(0);
   }
 
+  // 获取ConstMethod*存储到rdx
   __ movptr(rdx, Address(rbx, Method::const_offset()));
+  // 获取ConstantPool*存储到rdx
   __ movptr(rdx, Address(rdx, ConstMethod::constants_offset()));
+  // 获取ConstantPoolCache*并存储到rdx
   __ movptr(rdx, Address(rdx, ConstantPool::cache_offset()));
+  // 保存ConstantPoolCache*到堆栈上
   __ push(rdx); // set constant pool cache
 
   __ movptr(rax, rlocals);
@@ -656,11 +679,17 @@ void TemplateInterpreterGenerator::generate_fixed_frame(bool native_call) {
   __ push(rax); // set relativized rlocals, see frame::interpreter_frame_locals()
 
   if (native_call) {
+      // native方法调用时，不需要保存Java
+      // 方法的字节码地址，因为没有字节码
     __ push(0); // no bcp
   } else {
+      // 保存Java方法字节码地址到堆栈上，
+      // 注意上面对rbcp寄存器的值进行了更改
     __ push(rbcp); // set bcp
   }
+    // 预先保留一个slot，后面有大用处
   __ push(0); // reserve word for pointer to expression stack bottom
+    // 将栈底地址保存到这个slot上
   __ movptr(Address(rsp, 0), rsp); // set expression stack bottom
 }
 
@@ -1322,31 +1351,48 @@ address TemplateInterpreterGenerator::generate_abstract_entry(void) {
 
 //
 // Generic interpreted method entry to (asm) interpreter
-//
+// todo 方法栈：zerolocals 通用方法，最重要的方法生成
 address TemplateInterpreterGenerator::generate_normal_entry(bool synchronized) {
   // determine code generation flags
   bool inc_counter  = UseCompiler || CountCompiledCalls;
 
   // ebx: Method*
   // rbcp: sender sp (set in InterpreterMacroAssembler::prepare_to_jump_from_interpreted / generate_call_stub)
+  // entry_point函数的代码入口地址
   address entry_point = __ pc();
 
+  // 当前rbx中存储的是指向Method的指针，通过Method*找到ConstMethod*
   const Address constMethod(rbx, Method::const_offset());
+  // 通过Method*找到AccessFlags
   const Address access_flags(rbx, Method::access_flags_offset());
+  // 通过ConstMethod*得到parameter的大小
   const Address size_of_parameters(rdx,
                                    ConstMethod::size_of_parameters_offset());
+  // 通过ConstMethod*得到local变量的大小
   const Address size_of_locals(rdx, ConstMethod::size_of_locals_offset());
 
 
   // get parameter size (always needed)
+  // 上面已经说明了获取各种方法元数据的计算方式，
+  // 但并没有执行计算，下面会生成对应的汇编来执行计算
+  // 计算ConstMethod*，保存在rdx里面
   __ movptr(rdx, constMethod);
+  // 计算parameter大小，保存在rcx里面
   __ load_unsigned_short(rcx, size_of_parameters);
 
   // rbx: Method*
   // rcx: size of parameters
   // rbcp: sender_sp (could differ from sp+wordSize if we were called via c2i )
-
+  // rbx：保存基址；rcx：保存循环变量；rdx：保存目标地址；rax：保存返回地址（下面用到）
+  // 此时的各个寄存器中的值如下：
+  //   rbx: Method*
+  //   rcx: size of parameters
+  //   r13: sender_sp (could differ from sp+wordSize
+  //        if we were called via c2i ) 即调用者的栈顶地址
+  // 计算local变量的大小，保存到rdx
   __ load_unsigned_short(rdx, size_of_locals); // get size of locals in words
+  // 由于局部变量表用来存储传入的参数和被调用方法的局部变量，
+  // 所以rdx减去rcx后就是被调用方法的局部变量可使用的大小
   __ subl(rdx, rcx); // rdx = no. of additional locals
 
   // YYY
@@ -1357,14 +1403,23 @@ address TemplateInterpreterGenerator::generate_normal_entry(bool synchronized) {
   generate_stack_overflow_check();
 
   // get return address
+  // 返回地址是在CallStub中保存的，如果不弹出堆栈到rax，中间
+  // 会有个return address使的局部变量表不是连续的，
+  // 这会导致其中的局部变量计算方式不一致，所以暂时将返
+  // 回地址存储到rax中
   __ pop(rax);
 
   // compute beginning of parameters
+  // 计算第1个参数的地址：当前栈顶地址 + 变量大小 * 8 - 一个字大小
+  // 注意，因为地址保存在低地址上，而堆栈是向低地址扩展的，所以只
+  // 需加n-1个变量大小就可以得到第1个参数的地址
   __ lea(rlocals, Address(rsp, rcx, Interpreter::stackElementScale(), -wordSize));
 
   // rdx - # of additional locals
   // allocate space for locals
   // explicitly initialize locals
+  // 把函数的局部变量设置为0,也就是做初始化，防止之前遗留下的值影响
+  // rdx：被调用方法的局部变量可使用的大小
   {
     Label exit, loop;
     __ testl(rdx, rdx);
@@ -1377,6 +1432,7 @@ address TemplateInterpreterGenerator::generate_normal_entry(bool synchronized) {
   }
 
   // initialize fixed part of activation frame
+  // todo 方法栈：生成固定桢
   generate_fixed_frame(false);
 
   // make sure method is not native & not abstract
@@ -1430,6 +1486,7 @@ address TemplateInterpreterGenerator::generate_normal_entry(bool synchronized) {
   // check for synchronized methods
   // Must happen AFTER invocation_counter check and stack overflow check,
   // so method is not locked if overflows.
+  // 如果是同步方法时，还需要执行lock_method()函数，所以会影响到栈帧布局
   if (synchronized) {
     // Allocate monitor and lock method
     lock_method();
@@ -1464,6 +1521,7 @@ address TemplateInterpreterGenerator::generate_normal_entry(bool synchronized) {
   // jvmti support
   __ notify_method_entry();
 
+  // todo 方法栈：跳转到目标Java方法的第一条字节码指令，并执行其对应的机器指令
   __ dispatch_next(vtos);
 
   // invocation counter overflow

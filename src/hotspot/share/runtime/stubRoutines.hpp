@@ -298,16 +298,27 @@ class StubRoutines: AllStatic {
 
   // Calls to Java
   typedef void (*CallStub)(
+      // 连接器
     address   link,
+    // 函数返回值地址
     intptr_t* result,
+    // 函数返回値类型
     BasicType result_type,
+    // JVM内部所表示的Java方法对象
     Method* method,
+      // JVM调用Java方法的例程入口。JVM内部的每一段
+      // 例程都是在JVM启动过程中预先生成好的一段机器指令。
+      // 必须通过执行本例程来调用Java方法，
+      // 即需要先执行机器指令，然后才能跳转到Java方法
+      // 字节码所对应的机器指令去执行
     address   entry_point,
     intptr_t* parameters,
     int       size_of_parameters,
     TRAPS
   );
-
+  // #define CAST_TO_FN_PTR(func_type, value) (reinterpret_cast<func_type>(value))
+  // 将_call_stub_entry强制转换为CallStub
+  // StubRoutines::_call_stub_entry = generate_call_stub(StubRoutines::_call_stub_return_address);
   static CallStub call_stub()                              { return CAST_TO_FN_PTR(CallStub, _call_stub_entry); }
 
   // Exceptions

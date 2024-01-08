@@ -329,6 +329,7 @@ void JavaCalls::call(JavaValue* result, const methodHandle& method, JavaCallArgu
   os::os_exception_wrapper(call_helper, result, method, args, THREAD);
 }
 
+// todo 开始：方法栈调用入口
 void JavaCalls::call_helper(JavaValue* result, const methodHandle& method, JavaCallArguments* args, TRAPS) {
 
   JavaThread* thread = THREAD;
@@ -355,12 +356,15 @@ void JavaCalls::call_helper(JavaValue* result, const methodHandle& method, JavaC
   }
 #endif
 
+  // todo 处理是否走编译模式
   CompilationPolicy::compile_if_required(method, CHECK);
 
-  // todo 开始:方法栈创建
   // Since the call stub sets up like the interpreter we call the from_interpreted_entry
   // so we can go compiled via a i2c. Otherwise initial entry method will always
   // run interpreted.
+  // 获取目标方法的解释模式入口from_interpreted_entry，也就是entry_point的值。
+  // 获取的entry_point就是为调用Java方法准备栈桢，并把代码调用指针指向method的第一个字节码的内存地址。
+  // entry_point相当于是method的封装，不同的method类型有不同的entry_point。
   address entry_point = method->from_interpreted_entry();
   if (JvmtiExport::can_post_interpreter_events() && thread->is_interp_only_mode()) {
     entry_point = method->interpreter_entry();
@@ -414,14 +418,23 @@ void JavaCalls::call_helper(JavaValue* result, const methodHandle& method, JavaC
       }
 #endif
       StubRoutines::call_stub()(
+        // link 此变量的类型为JavaCallWrapper，这个变量对于栈展开过程非常重要
         (address)&link,
         // (intptr_t*)&(result->_value), // see NOTE above (compiler problem)
+        // result_val_address 函数返回值地址
         result_val_address,          // see NOTE above (compiler problem)
+        // result_type 函数返回类型；
         result_type,
+        // method() 当前要执行的方法。通过此参数可以获取到Java方法所有的元数据信息，包括最重要的字节码信息，这样就可以根据字节码信息解释执行这个方法了；
         method(),
+        // entry_point HotSpot VM每次在调用Java方法时，必然会调用CallStub函数指针，这个函数指针的值取自_call_stub_entry，_call_stub_entry指向被调用函数地址。
+        // 在调用函数之前，必须要先经过entry_point，HotSpot VM实际是通过entry_point从method()对象上拿到Java方法对应的第1个字节码命令，这也是整个函数的调用入口；
         entry_point,
+        // args->parameters() 描述Java函数的入参信息
         parameter_address,
+        // args->size_of_parameters() 参数需要占用的、以字为单位的内存占用大小；
         args->size_of_parameters(),
+        // CHECK 当前线程对象。
         CHECK
       );
 

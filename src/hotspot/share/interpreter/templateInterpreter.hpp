@@ -68,6 +68,8 @@ class DispatchTable {
   enum { length = 1 << BitsPerByte };                 // an entry point for each byte value (also for undefined bytecodes)
 
  private:
+    // number_of_states=9,length=256
+    // _table是字节码分发表
   address _table[number_of_states][length];           // dispatch tables, indexed by tosca and bytecode
 
  public:
