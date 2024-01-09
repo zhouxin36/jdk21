@@ -1405,6 +1405,7 @@ void JavaThread::oops_do_frames(OopClosure* f, CodeBlobClosure* cf) {
   // Finish any pending lazy GC activity for the frames
   StackWatermarkSet::finish_processing(this, nullptr /* context */, StackWatermarkKind::gc);
   // Traverse the execution stack
+  // todo 根扫描：方法栈扫描
   for (StackFrameStream fst(this, true /* update */, false /* process_frames */); !fst.is_done(); fst.next()) {
     fst.current()->oops_do(f, cf, fst.register_map());
   }

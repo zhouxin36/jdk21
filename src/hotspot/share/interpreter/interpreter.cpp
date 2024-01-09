@@ -87,22 +87,30 @@ void InterpreterCodelet::print() const { print_on(tty); }
 CodeletMark::CodeletMark(InterpreterMacroAssembler*& masm,
                          const char* description,
                          Bytecodes::Code bytecode) :
+// AbstractInterpreter::code()获取的是StubQueue*类型的值，调用request()方法获取的
+// 是Stub*类型的值，调用的request()方法实现在vm/code/stubs.cpp文件中
   _clet((InterpreterCodelet*)AbstractInterpreter::code()->request(codelet_size())),
   _cb(_clet->code_begin(), _clet->code_size()) {
   // Request all space (add some slack for Codelet data).
   assert(_clet != nullptr, "we checked not enough space already");
 
   // Initialize Codelet attributes.
+    // 初始化InterpreterCodelet中的_description和_bytecode属性
   _clet->initialize(description, bytecode);
   // Create assembler for code generation.
+    // create assembler for code generation
+    // InterpreterMacroAssembler->MacroAssembler->Assembler->AbstractAssembler
+    // 通过传入的cb.insts属性的值来初始化AbstractAssembler的_code_section与_oop_recorder属性的值
   masm = new InterpreterMacroAssembler(&_cb);
   _masm = &masm;
 }
 
 CodeletMark::~CodeletMark() {
   // Align so printing shows nop's instead of random code at the end (Codelets are aligned).
+    // 对齐InterpreterCodelet
   (*_masm)->align(wordSize);
   // Make sure all code is in code buffer.
+    // 确保生成的所有机器指令片段都存储到了InterpreterCodelet实例中
   (*_masm)->flush();
 
   // Commit Codelet.
@@ -113,6 +121,7 @@ CodeletMark::~CodeletMark() {
     NOT_PRODUCT(_clet->use_remarks((*_masm)->code()->asm_remarks()));
     NOT_PRODUCT(_clet->use_strings((*_masm)->code()->dbg_strings()));
 
+      // 更新InterpreterCodelet实例的相关属性值
     AbstractInterpreter::code()->commit(committed_code_size);
   } else {
     // InterpreterCodelet is not being commited and may be re-used. We need to free the storage for
@@ -121,6 +130,7 @@ CodeletMark::~CodeletMark() {
     NOT_PRODUCT(_clet->clear_strings());
   }
   // Make sure nobody can use _masm outside a CodeletMark lifespan.
+    // 设置_masm，这样就无法通过这个值继续向此InterpreterCodelet实例中生成机器指令了
   *_masm = nullptr;
 }
 

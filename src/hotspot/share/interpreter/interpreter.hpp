@@ -102,7 +102,7 @@ DEF_STUB_INTERFACE(InterpreterCodelet);
 
 class CodeletMark: ResourceMark {
  private:
-  InterpreterCodelet*         _clet;
+  InterpreterCodelet*         _clet;// InterpreterCodelet继承自Stub
   InterpreterMacroAssembler** _masm;
   CodeBuffer                  _cb;
 

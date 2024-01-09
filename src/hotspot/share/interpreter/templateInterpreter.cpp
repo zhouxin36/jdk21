@@ -37,7 +37,10 @@
 #include "utilities/copy.hpp"
 
 # define __ _masm->
-
+// todo 方法栈：初始化stab
+// StubQueue是用来保存生成的本地代码的Stub队列
+// InterpreterCodelet实例存储在StubQueue中，每个InterpreterCodelet实例都代表一段机器指令
+// StubQueue调用BufferBlob::create()函数分配内存
 void TemplateInterpreter::initialize_stub() {
   // assertions
   assert(_code == nullptr, "must only initialize once");
@@ -54,10 +57,13 @@ void TemplateInterpreter::initialize_stub() {
   _code = new StubQueue(new InterpreterCodeletInterface, code_size + max_aligned_bytes, nullptr,
                         "Interpreter");
 }
-
+// todo 方法栈：初始化解释器
 void TemplateInterpreter::initialize_code() {
+  // 抽象解释器AbstractInterpreter的初始化，
+  // AbstractInterpreter是基于汇编模型的解释器的共同基类，
+  // 定义了解释器和解释器生成器的抽象接口
   AbstractInterpreter::initialize();
-
+  // 模板表TemplateTable的初始化，模板表TemplateTable保存了各个字节码的模板
   TemplateTable::initialize();
 
   // generate interpreter
@@ -74,6 +80,7 @@ void TemplateInterpreter::initialize_code() {
   }
 
   // initialize dispatch table
+    // 初始化字节分发表
   _active_table = _normal_table;
 }
 

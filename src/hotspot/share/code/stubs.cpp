@@ -115,6 +115,7 @@ Stub* StubQueue::request_committed(int code_size) {
 
 int StubQueue::compute_stub_size(Stub* stub, int code_size) {
   address stub_begin = (address) stub;
+  // { return align_up((address)this + sizeof(InterpreterCodelet), CodeEntryAlignment); }
   address code_begin = stub_code_begin(stub);
   address code_end = align_up(code_begin + code_size, stub_alignment());
   return (int)(code_end - stub_begin);
@@ -125,6 +126,7 @@ Stub* StubQueue::request(int requested_code_size) {
   if (_mutex != nullptr) _mutex->lock_without_safepoint_check();
   Stub* s = current_stub();
   int requested_size = compute_stub_size(s, requested_code_size);
+    // 比较需要为新的InterpreterCodelet分配的内存和可用内存的大小情况
   if (requested_size <= available_space()) {
     if (is_contiguous()) {
       // Queue: |...|XXXXXXX|.............|

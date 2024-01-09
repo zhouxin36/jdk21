@@ -76,6 +76,16 @@
                                                                                                                                   \
   def(_shouldnotreachhere        , "_shouldnotreachhere"       , "b"    , nullptr    , T_VOID   ,  0, false, _shouldnotreachhere)
 
+// todo 方法栈：字节码定义
+//bytecode name就是字节码名称；
+//format，这个属性能表达2个意思，首先能表达字节码的格式，另外还能表示字节码的长度。
+//wide表示字节码前面是否可以加wide，如果可以，则值为"wbii"；
+//result tp表示指令执行后的结果类型，如为T_ILLEGAL时，表示只参考当前字节码无法决定执行结果的类型，
+//      如_invokevirtual方法调用指令，结果类型应该为方法返回类型，但是此时只参考这个调用方法的字节码指令是无法决定的；
+//stk表示对表达式栈深度的影响，如_nop指令不执行任何操作，所以对表达式栈的深度无影响，stk的值为0；
+//      当用_iconst_0向栈中压入0时，栈的深度增加1，所以stk的值为1。当为_lconst_0时，栈的深度会增加2；当为_lstore_0时，栈的深度会减少2；
+//traps表示can_trap，这个比较重要，在后面会详细介绍。
+//  bytecode               bytecode name     format   wide f.      result tp  stk traps
 #define BYTECODES_DO(def)                                                                                  \
   def(_nop             , "nop"             , "b"    , nullptr    , T_VOID   ,  0, false, _nop            ) \
   def(_aconst_null     , "aconst_null"     , "b"    , nullptr    , T_OBJECT ,  1, false, _aconst_null    ) \
@@ -440,8 +450,12 @@ void Bytecodes::def_flags(Code code, const char* format, const char* wide_format
   int wlen = (wide_format != nullptr ? (int) strlen(wide_format) : 0);
 #endif
   int bc_flags = 0;
+  // ldc、ldc_w、ldc2_w、_aload_0、iaload、iastore、idiv、ldiv、ireturn等
+  // 字节码指令都会含有_bc_can_trap
   if (can_trap)           bc_flags |= _bc_can_trap;
+  // 虚拟机内部定义的指令都会有_bc_can_rewrite
   if (java_code != code)  bc_flags |= _bc_can_rewrite;
+  // 在这里对_flags赋值操作
   _flags[(u1)code+0*(1<<BitsPerByte)] = compute_flags(format,      bc_flags);
   _flags[(u1)code+1*(1<<BitsPerByte)] = compute_flags(wide_format, bc_flags);
   assert(is_defined(code)      == (format != nullptr),      "");
@@ -540,7 +554,7 @@ int Bytecodes::compute_flags(const char* format, int more_flags) {
     has_size = this_size;
   }
 }
-
+// todo 方法栈：字节码初始化
 void Bytecodes::initialize() {
   if (_is_initialized) return;
 

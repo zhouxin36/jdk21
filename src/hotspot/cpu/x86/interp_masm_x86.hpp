@@ -169,7 +169,7 @@ class InterpreterMacroAssembler: public MacroAssembler {
   void push_d();
   void push_f();
 #endif // _LP64
-
+// assembler_x86.cpp Assembler::pop(Register dst)
   void pop(Register r) { ((MacroAssembler*)this)->pop(r); }
   void push(Register r) { ((MacroAssembler*)this)->push(r); }
   void push(int32_t imm ) { ((MacroAssembler*)this)->push(imm); }

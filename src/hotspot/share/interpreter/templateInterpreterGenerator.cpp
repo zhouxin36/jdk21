@@ -52,7 +52,7 @@ static const BasicType types[Interpreter::number_of_result_handlers] = {
   T_DOUBLE ,
   T_OBJECT
 };
-
+// todo 方法栈：存储机器指令片段
 void TemplateInterpreterGenerator::generate_all() {
   { CodeletMark cm(_masm, "slow signature handler");
     AbstractInterpreter::_slow_signature_handler = generate_slow_signature_handler();
@@ -171,6 +171,8 @@ void TemplateInterpreterGenerator::generate_all() {
     Interpreter::_throw_ArrayStoreException_entry            = generate_klass_exception_handler("java/lang/ArrayStoreException");
     Interpreter::_throw_ArithmeticException_entry            = generate_exception_handler("java/lang/ArithmeticException", "/ by zero");
     Interpreter::_throw_ClassCastException_entry             = generate_ClassCastException_handler();
+    // 方法栈：生成空指针异常抛出入口的实现
+    // code_section()函数获取的就是AbstractAssembler的_code_section属性的值。
     Interpreter::_throw_NullPointerException_entry           = generate_exception_handler("java/lang/NullPointerException", nullptr);
     Interpreter::_throw_StackOverflowError_entry             = generate_StackOverflowError_handler();
   }

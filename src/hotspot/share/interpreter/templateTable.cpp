@@ -215,7 +215,7 @@ void TemplateTable::def(Bytecodes::Code code, int flags, TosState in, TosState o
 void TemplateTable::def(Bytecodes::Code code, int flags, TosState in, TosState out, void (*gen)(Condition cc), Condition cc) {
   def(code, flags, in, out, (Template::generator)gen, (int)cc);
 }
-
+// todo 方法栈：字节码模板初始化
 void TemplateTable::initialize() {
 #ifdef ASSERT
   static bool is_initialized = false;
