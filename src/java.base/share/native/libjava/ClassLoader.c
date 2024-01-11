@@ -316,7 +316,7 @@ Java_java_lang_ClassLoader_findBootstrapClass(JNIEnv *env, jclass dummy,
 
     return cls;
 }
-
+// todo 类加载: findLoadedClass
 JNIEXPORT jclass JNICALL
 Java_java_lang_ClassLoader_findLoadedClass0(JNIEnv *env, jobject loader,
                                            jstring name)

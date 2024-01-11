@@ -192,6 +192,7 @@ Method* Klass::uncached_lookup_method(const Symbol* name, const Symbol* signatur
 }
 
 void* Klass::operator new(size_t size, ClassLoaderData* loader_data, size_t word_size, TRAPS) throw() {
+    // 在元空间分配内存
   return Metaspace::allocate(loader_data, word_size, MetaspaceObj::ClassType, THREAD);
 }
 
@@ -235,12 +236,14 @@ bool Klass::can_be_primary_super_slow() const {
   else
     return true;
 }
-
+// todo java对象：初始化super
 void Klass::initialize_supers(Klass* k, Array<InstanceKlass*>* transitive_interfaces, TRAPS) {
+    // 当前类的父类k可能为NULL，例如Object的父类为NULL
   if (k == nullptr) {
     set_super(nullptr);
     _primary_supers[0] = this;
     assert(super_depth() == 0, "Object must already be initialized properly");
+    // k就是当前类的直接父类，如果有父类，那么super()一般为NULL，如果k为NULL，那么就是Object类
   } else if (k != super() || k == vmClasses::Object_klass()) {
     assert(super() == nullptr || super() == vmClasses::Object_klass(),
            "initialize this only once to a non-trivial value");
@@ -250,6 +253,7 @@ void Klass::initialize_supers(Klass* k, Array<InstanceKlass*>* transitive_interf
     juint my_depth  = MIN2(sup_depth + 1, (int)primary_super_limit());
     if (!can_be_primary_super_slow())
       my_depth = primary_super_limit();
+    // 将直接父类的继承类复制到_primary_supers中，因为直接父类和当前子类肯定有共同的继承链
     for (juint i = 0; i < my_depth; i++) {
       _primary_supers[i] = sup->_primary_supers[i];
     }

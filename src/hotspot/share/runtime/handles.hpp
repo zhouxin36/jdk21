@@ -61,7 +61,15 @@ class Thread;
 //------------------------------------------------------------------------------------------------------------------------
 // Base class for all handles. Provides overloading of frequently
 // used operators for ease of use.
-
+// todo java对象: 句柄,Handle、HandleArea、Chunk、HandleMark
+// Handle oop的句柄
+// HandleArea 存储句柄，Thread Local，绑定线程
+// arena.hpp#Chunk 继承CHeapObj，在c-heap申请内存
+// arena.hpp#Arena
+// HandleMark 每一个Java线程都有一个私有的句柄区_handle_area用来存储其运行过程中的句柄信息，这个句柄区会随着Java线程的栈帧而变化。
+//      Java线程每调用一个Java方法就会创建一个对应的HandleMark保存创建的对象句柄，然后等调用返回后释放这些对象句柄，
+//      此时释放的仅是调用当前方法创建的句柄，因此HandleMark只需要恢复到调用方法之前的状态即可。
+//      HandleMark 直接在线程栈内存上分配内存，应该继承自StackObj，但有时HandleMark也需要在堆内存上分配，因此没有继承自StackObj，并且为了支持在堆内存上分配内存，重载了new和delete方法。
 class Handle {
  private:
   oop* _handle;
@@ -196,6 +204,7 @@ class HandleArea: public Arena {
   // Handle allocation
  private:
   oop* real_allocate_handle(oop obj) {
+      // 调用arena.hpp#internal_amalloc
     oop* handle = (oop*)internal_amalloc(oopSize);
     *handle = obj;
     return handle;

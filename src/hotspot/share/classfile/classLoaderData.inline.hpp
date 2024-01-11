@@ -73,6 +73,7 @@ inline bool ClassLoaderData::is_boot_class_loader_data() const {
 }
 
 inline ClassLoaderData* ClassLoaderData::class_loader_data_or_null(oop loader) {
+    // 如果类加载器为空，使用bootstrap类加载器
   if (loader == nullptr) {
     return ClassLoaderData::the_null_class_loader_data();
   }

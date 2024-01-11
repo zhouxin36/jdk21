@@ -543,12 +543,13 @@ JavaMain(void* _args)
      */
 #define MAIN_WITHOUT_ARGS 1
 #define MAIN_NONSTATIC 2
-
+    // 加载sun.launcher.LauncherHelper类
     jclass helperClass = GetLauncherHelperClass(env);
     jmethodID getMainType = (*env)->GetStaticMethodID(env, helperClass,
                                                       "getMainType",
                                                       "()I");
     CHECK_EXCEPTION_NULL_LEAVE(getMainType);
+    // 返回值为0
     int mainType = (*env)->CallStaticIntMethod(env, helperClass, getMainType);
     CHECK_EXCEPTION_LEAVE(mainType);
 

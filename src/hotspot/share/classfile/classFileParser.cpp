@@ -1451,26 +1451,30 @@ void ClassFileParser::parse_fields(const ClassFileStream* const cfs,
 
   // Allocate a temporary resource array to collect field data.
   // After parsing all fields, data are stored in a UNSIGNED5 compressed stream.
+  // todo 字段: 申请内存
+  // 使用ResourceArea申请空间，类似句柄的HandleArea和HandleMark
+  // 申请total_fields 大小空间
+  // 调用GrowableArray::allocate
   _temp_field_info = new GrowableArray<FieldInfo>(total_fields);
 
   ResourceMark rm(THREAD);
   for (int n = 0; n < length; n++) {
     // access_flags, name_index, descriptor_index, attributes_count
     cfs->guarantee_more(8, CHECK);
-
+    // 读取变量的访问标识
     AccessFlags access_flags;
     const jint flags = cfs->get_u2_fast() & JVM_RECOGNIZED_FIELD_MODIFIERS;
     verify_legal_field_modifiers(flags, is_interface, CHECK);
     access_flags.set_flags(flags);
     FieldInfo::FieldFlags fieldFlags(0);
-
+    // 读取变量的名称索引
     const u2 name_index = cfs->get_u2_fast();
     check_property(valid_symbol_at(name_index),
       "Invalid constant pool index %u for field name in class file %s",
       name_index, CHECK);
     const Symbol* const name = cp->symbol_at(name_index);
     verify_legal_field_name(name, CHECK);
-
+    // 读取描述符索引
     const u2 signature_index = cfs->get_u2_fast();
     check_property(valid_symbol_at(signature_index),
       "Invalid constant pool index %u for field signature in class file %s",
@@ -1483,7 +1487,7 @@ void ClassFileParser::parse_fields(const ClassFileStream* const cfs,
     u2 generic_signature_index = 0;
     const bool is_static = access_flags.is_static();
     FieldAnnotationCollector parsed_annotations(_loader_data);
-
+    // 读取变量属性
     const u2 attributes_count = cfs->get_u2_fast();
     if (attributes_count > 0) {
       parse_field_attributes(cfs,
@@ -1528,8 +1532,10 @@ void ClassFileParser::parse_fields(const ClassFileStream* const cfs,
     const BasicType type = cp->basic_type_for_signature_at(signature_index);
 
     // Update FieldAllocationCount for this kind of field
+    // 对字段的数量进行统计
     fac->update(is_static, type);
 
+    // 生成字段信息
     FieldInfo fi(access_flags, name_index, signature_index, constantvalue_index, fieldFlags);
     fi.set_index(n);
     if (fieldFlags.is_generic()) {
@@ -5434,7 +5440,7 @@ static bool relax_format_check_for(ClassLoaderData* loader_data) {
     (!BytecodeVerificationLocal && BytecodeVerificationRemote && !trusted);
   return !need_verify;
 }
-
+// todo 开始: 读取class文件
 ClassFileParser::ClassFileParser(ClassFileStream* stream,
                                  Symbol* name,
                                  ClassLoaderData* loader_data,
@@ -5532,6 +5538,7 @@ ClassFileParser::ClassFileParser(ClassFileStream* stream,
   // Do not restrict it to jdk1.0 or jdk1.1 to maintain backward compatibility (4982376)
   _relax_verify = relax_format_check_for(_loader_data);
 
+  // todo class文件: 解析
   parse_stream(stream, CHECK);
 
   post_process_parsed_stream(stream, _cp, CHECK);
@@ -5638,12 +5645,14 @@ void ClassFileParser::parse_stream(const ClassFileStream* const stream,
   // BEGIN STREAM PARSING
   stream->guarantee_more(8, CHECK);  // magic, major, minor
   // Magic value
+  // 读取魔数
   const u4 magic = stream->get_u4_fast();
   guarantee_property(magic == JAVA_CLASSFILE_MAGIC,
                      "Incompatible magic value %u in class file %s",
                      magic, CHECK);
 
   // Version numbers
+  // 读取主版本号、次版本号
   _minor_version = stream->get_u2_fast();
   _major_version = stream->get_u2_fast();
 
@@ -5661,7 +5670,7 @@ void ClassFileParser::parse_stream(const ClassFileStream* const stream,
   if (is_hidden()) { // Add a slot for hidden class name.
     cp_size++;
   }
-
+  // 常量池，于元空间申请内存
   _cp = ConstantPool::allocate(_loader_data,
                                cp_size,
                                CHECK);

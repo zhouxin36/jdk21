@@ -461,7 +461,7 @@ Symbol* SymbolTable::lookup_only_unicode(const jchar* name, int utf16_length,
     return lookup_only(chars, utf8_length, hash);
   }
 }
-
+// todo 字符表: 批处理新建symbol
 void SymbolTable::new_symbols(ClassLoaderData* loader_data, const constantPoolHandle& cp,
                               int names_count, const char** names, int* lengths,
                               int* cp_indices, unsigned int* hashValues) {

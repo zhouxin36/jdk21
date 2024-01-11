@@ -110,8 +110,11 @@ class ClassFileParser {
   // Potentially unaligned pointer to various 16-bit entries in the class file
   typedef void unsafe_u2;
 
+  // 文件字节流
   const ClassFileStream* _stream; // Actual input stream
+  // 类名称
   Symbol* _class_name;
+  // 加载类的类加载器
   mutable ClassLoaderData* _loader_data;
   const bool _is_hidden;
   const bool _can_access_vm_annotations;
@@ -120,17 +123,23 @@ class ClassFileParser {
   // Metadata created before the instance klass is created.  Must be deallocated
   // if not transferred to the InstanceKlass upon successful class loading
   // in which case these pointers have been set to null.
+  // 父类
   const InstanceKlass* _super_klass;
+  // 常量池引用
   ConstantPool* _cp;
+  // 字段列表
   Array<u1>* _fieldinfo_stream;
   Array<FieldStatus>* _fields_status;
+  // 方法列表
   Array<Method*>* _methods;
   Array<u2>* _inner_classes;
   Array<u2>* _nest_members;
   u2 _nest_host;
   Array<u2>* _permitted_subclasses;
   Array<RecordComponent*>* _record_components;
+  // 直接实现的接口
   Array<InstanceKlass*>* _local_interfaces;
+  // 实现的所有接口
   Array<InstanceKlass*>* _transitive_interfaces;
   Annotations* _combined_annotations;
   AnnotationArray* _class_annotations;
@@ -177,7 +186,7 @@ class ClassFileParser {
   const char* _sde_buffer;
   u2 _sourcefile_index;
   u2 _generic_signature_index;
-
+  // 类的主版本号与次版本号
   u2 _major_version;
   u2 _minor_version;
   u2 _this_class_index;

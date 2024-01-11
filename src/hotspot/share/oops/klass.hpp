@@ -149,6 +149,7 @@ class Klass : public Metadata {
   // Ordered list of all primary supertypes
   Klass*      _primary_supers[_primary_super_limit];
   // java/lang/Class instance mirroring this class
+  // 对应的Class类对象，用来访问类的静态属性
   OopHandle   _java_mirror;
   // Superclass
   Klass*      _super;

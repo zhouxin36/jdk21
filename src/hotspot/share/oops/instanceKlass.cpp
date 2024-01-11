@@ -431,8 +431,9 @@ const char* InstanceKlass::nest_host_error() {
     return SystemDictionary::find_nest_host_error(cph, (int)_nest_host_index);
   }
 }
-
+// todo java对象：创建Klass实例
 InstanceKlass* InstanceKlass::allocate_instance_klass(const ClassFileParser& parser, TRAPS) {
+    // 获取创建InstanceKlass实例时需要分配的内存空间
   const int size = InstanceKlass::size(parser.vtable_size(),
                                        parser.itable_size(),
                                        nonstatic_oop_map_size(parser.total_oop_map_count()),
@@ -1719,8 +1720,12 @@ void InstanceKlass::do_local_static_fields(FieldClosure* cl) {
 
 void InstanceKlass::do_local_static_fields(void f(fieldDescriptor*, Handle, TRAPS), Handle mirror, TRAPS) {
   for (JavaFieldStream fs(this); !fs.done(); fs.next()) {
+      // todo java对象: 保存静态字段到Class类对象
+      // 通过JavaFieldStream提供的方法迭代遍历InstanceKlass实例中声明的所有字段
     if (fs.access_flags().is_static()) {
+      // 只处理静态字段，因为只有静态字段的值会保存到java.lang.Class对象中
       fieldDescriptor& fd = fs.field_descriptor();
+        // 调用javaClasses.cpp#initialize_static_field
       f(&fd, mirror, CHECK);
     }
   }

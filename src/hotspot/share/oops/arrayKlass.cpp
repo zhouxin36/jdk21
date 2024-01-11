@@ -44,6 +44,8 @@ int ArrayKlass::static_size(int header_size) {
   // size of an array klass object
   assert(header_size <= InstanceKlass::header_size(), "bad header size");
   // If this assert fails, see comments in base_create_array_klass.
+  // 因为InstanceKlass的占用空间比ArrayKlass大，所以直接用InstanceKlass的
+  //为了统一从固定的偏移位置获取vtable等信息，在实际操作Klass实例的过程中无须关心是数组还是类，直接偏移固定位置后就可获取。
   header_size = InstanceKlass::header_size();
   int vtable_len = Universe::base_vtable_size();
   int size = header_size + vtable_len;

@@ -1116,6 +1116,7 @@ ClassFileStream* ClassLoader::search_module_entries(JavaThread* current,
 }
 
 // Called by the boot classloader to load classes
+// todo 开始: 类加载
 InstanceKlass* ClassLoader::load_class(Symbol* name, bool search_append_only, TRAPS) {
   assert(name != nullptr, "invariant");
 
@@ -1204,6 +1205,7 @@ InstanceKlass* ClassLoader::load_class(Symbol* name, bool search_append_only, TR
 
   stream->set_verify(ClassLoaderExt::should_verify(classpath_index));
 
+  // 获取系统类加载器
   ClassLoaderData* loader_data = ClassLoaderData::the_null_class_loader_data();
   Handle protection_domain;
   ClassLoadInfo cl_info(protection_domain);

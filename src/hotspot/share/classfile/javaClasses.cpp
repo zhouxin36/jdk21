@@ -850,6 +850,7 @@ static void initialize_static_primitive_field(fieldDescriptor* fd, Handle mirror
 
 static void initialize_static_field(fieldDescriptor* fd, Handle mirror, TRAPS) {
   assert(mirror.not_null() && fd->is_static(), "just checking");
+  // 如果静态字段有初始值，则将此值保存到oop实例中对应的存储静态字段的槽位上
   if (fd->has_initial_value()) {
     if (fd->field_type() != T_OBJECT) {
       initialize_static_primitive_field(fd, mirror);
@@ -975,6 +976,7 @@ void java_lang_Class::allocate_fixup_lists() {
 void java_lang_Class::allocate_mirror(Klass* k, bool is_scratch, Handle protection_domain, Handle classData,
                                       Handle& mirror, Handle& comp_mirror, TRAPS) {
   // Allocate mirror (java.lang.Class instance)
+  // 生成Class对象
   oop mirror_oop = InstanceMirrorKlass::cast(vmClasses::Class_klass())->allocate_instance(k, CHECK);
   mirror = Handle(THREAD, mirror_oop);
 
@@ -1015,6 +1017,7 @@ void java_lang_Class::allocate_mirror(Klass* k, bool is_scratch, Handle protecti
   } else {
     assert(k->is_instance_klass(), "Must be");
 
+    // 初始化本地静态字段
     initialize_mirror_fields(k, mirror, protection_domain, classData, THREAD);
     if (HAS_PENDING_EXCEPTION) {
       // If any of the fields throws an exception like OOM remove the klass field
@@ -1026,7 +1029,7 @@ void java_lang_Class::allocate_mirror(Klass* k, bool is_scratch, Handle protecti
     }
   }
 }
-
+// todo java对象: 生成静态属性
 void java_lang_Class::create_mirror(Klass* k, Handle class_loader,
                                     Handle module, Handle protection_domain,
                                     Handle classData, TRAPS) {
@@ -1045,6 +1048,7 @@ void java_lang_Class::create_mirror(Klass* k, Handle class_loader,
     Handle mirror;
     Handle comp_mirror;
 
+    // 调用
     allocate_mirror(k, /*is_scratch=*/false, protection_domain, classData, mirror, comp_mirror, CHECK);
 
     // set the classLoader field in the java_lang_Class instance
@@ -1260,6 +1264,7 @@ oop java_lang_Class::create_basic_type_mirror(const char* basic_type_name, Basic
   // introducing a new VM klass (see comment in ClassFileParser)
   oop java_class = InstanceMirrorKlass::cast(vmClasses::Class_klass())->allocate_instance(nullptr, CHECK_NULL);
   if (type != T_VOID) {
+      // 设置java_mirror的_array_klass_offset 指向基本类型的一维数组klass
     Klass* aklass = Universe::typeArrayKlassObj(type);
     assert(aklass != nullptr, "correct bootstrap");
     release_set_array_klass(java_class, aklass);

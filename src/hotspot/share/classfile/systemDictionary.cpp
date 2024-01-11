@@ -131,7 +131,7 @@ oop SystemDictionary::java_system_loader() {
 oop SystemDictionary::java_platform_loader() {
   return _java_platform_loader.resolve();
 }
-
+// todo 类加载: 初始化AppClassLoader（_java_system_loader）、平台类加载器（PlatformClassLoader）
 void SystemDictionary::compute_java_loaders(TRAPS) {
   if (_java_system_loader.is_empty()) {
     oop system_loader = get_system_class_loader_impl(CHECK);
@@ -162,12 +162,16 @@ void SystemDictionary::compute_java_loaders(TRAPS) {
 
 oop SystemDictionary::get_system_class_loader_impl(TRAPS) {
   JavaValue result(T_OBJECT);
+    // 调用的目标类为java.lang.ClassLoader
   InstanceKlass* class_loader_klass = vmClasses::ClassLoader_klass();
+  // VM 调用java api入口
   JavaCalls::call_static(&result,
                          class_loader_klass,
+                         // 调用目标类中的目标方法为getSystemClassLoader()
                          vmSymbols::getSystemClassLoader_name(),
                          vmSymbols::void_classloader_signature(),
                          CHECK_NULL);
+  // 获取调用值
   return result.get_oop();
 }
 

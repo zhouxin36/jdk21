@@ -30,6 +30,7 @@
 
 void* GrowableArrayResourceAllocator::allocate(int max, int elementSize) {
   assert(max >= 0, "integer overflow");
+  // elementSize=sizeof(FieldInfo)
   size_t byte_size = elementSize * (size_t) max;
 
   return (void*)resource_allocate_bytes(byte_size);

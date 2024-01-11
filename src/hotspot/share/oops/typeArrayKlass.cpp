@@ -48,12 +48,13 @@ TypeArrayKlass* TypeArrayKlass::create_klass(BasicType type,
   if (name_str != nullptr) {
     sym = SymbolTable::new_permanent_symbol(name_str);
   }
-
+  // 使用系统类加载器加载
   ClassLoaderData* null_loader_data = ClassLoaderData::the_null_class_loader_data();
 
   TypeArrayKlass* ak = TypeArrayKlass::allocate(null_loader_data, type, sym, CHECK_NULL);
 
   // Call complete_create_array_klass after all instance variables have been initialized.
+  // 初始化后调用，生成 java_mirror
   complete_create_array_klass(ak, ak->super(), ModuleEntryTable::javabase_moduleEntry(), CHECK_NULL);
 
   // Add all classes to our internal class loader list here,

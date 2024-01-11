@@ -336,6 +336,8 @@ void Universe::genesis(TRAPS) {
       // int-TypeArrayKlass so that the int-Array mirror points to the
       // int-TypeArrayKlass.
       _fillerArrayKlassObj = TypeArrayKlass::create_klass(T_INT, "Ljdk/internal/vm/FillerArray;", CHECK);
+        // todo java对象: 基本类型Klass
+        // 生成从Boolean到long类型的一维数组
       for (int i = T_BOOLEAN; i < T_LONG+1; i++) {
         _typeArrayKlassObjs[i] = TypeArrayKlass::create_klass((BasicType)i, CHECK);
       }
