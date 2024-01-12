@@ -62,7 +62,28 @@ class PackageEntry;
 class ParCompactionManager;
 class PSPromotionManager;
 class vtableEntry;
-
+/**
+ * todo java对象: 类布局
+ * todo 类加载: 类布局
+ *
+ * ------------------------------------------------------------------------
+ * |                                                                      |
+ * |            header(sizeof(InstanceKlass)/wordSize)                    |
+ * |                                                                      |
+ * ------------------------------------------------------------------------
+ * |                                                                      |
+ * |                             vtable列表                                |
+ * |                                                                      |
+ * ------------------------------------------------------------------------
+ * |                                                                      |
+ * |                             itable列表                                |
+ * |                                                                      |
+ * ------------------------------------------------------------------------
+ * |                                                                      |
+ * |                   nonstatic_oop_map_size列表                          |
+ * |                                                                      |
+ * ------------------------------------------------------------------------
+ */
 class Klass : public Metadata {
   friend class VMStructs;
   friend class JVMCIVMStructs;

@@ -850,6 +850,7 @@ static void initialize_static_primitive_field(fieldDescriptor* fd, Handle mirror
 
 static void initialize_static_field(fieldDescriptor* fd, Handle mirror, TRAPS) {
   assert(mirror.not_null() && fd->is_static(), "just checking");
+  // todo 字段: 初始化静态字段
   // 如果静态字段有初始值，则将此值保存到oop实例中对应的存储静态字段的槽位上
   if (fd->has_initial_value()) {
     if (fd->field_type() != T_OBJECT) {

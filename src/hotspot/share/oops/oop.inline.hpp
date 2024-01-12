@@ -328,6 +328,7 @@ size_t oopDesc::oop_iterate_size(OopClosureType* cl) {
   Klass* k = klass();
   size_t size = size_given_klass(k);
     // 调用 InstanceKlass::oop_oop_iterate
+    // instanceKlass.inline.hpp
   OopIteratorClosureDispatch::oop_oop_iterate(cl, this, k);
   return size;
 }

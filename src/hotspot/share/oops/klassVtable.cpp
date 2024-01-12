@@ -75,6 +75,7 @@ void klassVtable::compute_vtable_size_and_num_mirandas(
   int vtable_length = 0;
 
   // start off with super's vtable length
+  // 获取父类vtable的大小，并将当前类的vtable 的大小暂时设置为父类vtable的大小
   vtable_length = super == nullptr ? 0 : super->vtable_length();
 
   // go thru each method in the methods table to see if it needs a new entry
@@ -89,20 +90,20 @@ void klassVtable::compute_vtable_size_and_num_mirandas(
   }
 
   GrowableArray<Method*> new_mirandas(20);
-  // compute the number of mirandas methods that must be added to the end
+  // 计算必须添加到末尾的 mirandas 方法的数量
+  // 接口不计算，为了能找到接口，需要合成接口（抽象方法）方法
   get_mirandas(&new_mirandas, all_mirandas, super, methods, nullptr, local_interfaces,
                class_flags.is_interface());
   *num_new_mirandas = new_mirandas.length();
 
-  // Interfaces do not need interface methods in their vtables
+  // 接口的 vtable 中不需要接口方法
   // This includes miranda methods and during later processing, default methods
   if (!class_flags.is_interface()) {
      vtable_length += *num_new_mirandas * vtableEntry::size();
   }
 
   if (Universe::is_bootstrapping() && vtable_length == 0) {
-    // array classes don't have their superclass set correctly during
-    // bootstrapping
+    // 数组类在引导期间没有正确设置其超类
     vtable_length = Universe::base_vtable_size();
   }
 
@@ -185,6 +186,7 @@ void klassVtable::initialize_vtable(GrowableArray<InstanceKlass*>* supers) {
     return;
   }
 
+  // vtable 1、从父类拷贝
   int super_vtable_len = initialize_from_super(super);
   if (_klass->is_array_klass()) {
     assert(super_vtable_len == _length, "arrays shouldn't introduce new methods");
@@ -201,6 +203,7 @@ void klassVtable::initialize_vtable(GrowableArray<InstanceKlass*>* supers) {
       // update_inherited_vtable can stop for gc - ensure using handles
       methodHandle mh(current, methods->at(i));
 
+      // vtable 2、如果可以覆盖就直接覆盖，如果不能返回true新建entry
       bool needs_new_entry = update_inherited_vtable(current, mh, super_vtable_len, -1, supers);
 
       if (needs_new_entry) {
@@ -210,7 +213,7 @@ void klassVtable::initialize_vtable(GrowableArray<InstanceKlass*>* supers) {
       }
     }
 
-    // update vtable with default_methods
+    // vtable 3、使用default_methods更新vtable
     Array<Method*>* default_methods = ik()->default_methods();
     if (default_methods != nullptr) {
       len = default_methods->length();
@@ -253,6 +256,7 @@ void klassVtable::initialize_vtable(GrowableArray<InstanceKlass*>* supers) {
     // add miranda methods; it will also return the updated initialized
     // Interfaces do not need interface methods in their vtables
     // This includes miranda methods and during later processing, default methods
+    // vtable 4、更新miranda方法
     if (!ik()->is_interface()) {
       initialized = fill_in_mirandas(current, initialized);
     }
@@ -638,29 +642,28 @@ bool klassVtable::needs_new_vtable_entry(Method* target_method,
                                          AccessFlags class_flags,
                                          u2 major_version) {
   if (class_flags.is_interface()) {
-    // Interfaces do not use vtables, except for java.lang.Object methods,
-    // so there is no point to assigning
+    // 除了 java.lang.Object 方法之外，接口不使用 vtable，
+    // 所以没有必要分配
     // a vtable index to any of their local methods.  If we refrain from doing this,
     // we can use Method::_vtable_index to hold the itable index
     return false;
   }
 
   if (target_method->is_final_method(class_flags) ||
-      // a final method never needs a new entry; final methods can be statically
-      // resolved and they have to be present in the vtable only if they override
+      //final方法永远不需要新entry;
+      // final方法可以静态解析，并且仅当它们重写时才必须出现在 vtable 中
       // a super's method, in which case they re-use its entry
       (target_method->is_private()) ||
-      // private methods don't need to be in vtable
+      // 私有方法不需要位于 vtable 中
       (target_method->is_static()) ||
-      // static methods don't need to be in vtable
+      // 静态方法不需要位于 vtable 中
       (target_method->name()->fast_compare(vmSymbols::object_initializer_name()) == 0)
-      // <init> is never called dynamically-bound
+      // <init> 永远不会被动态绑定调用
       ) {
     return false;
   }
 
-  // Concrete interface methods do not need new entries, they override
-  // abstract method entries using default inheritance rules
+  // 具体的接口方法不需要新的entries, they override abstract method entries using default inheritance rules
   if (target_method->method_holder() != nullptr &&
       target_method->method_holder()->is_interface()  &&
       !target_method->is_abstract()) {
@@ -669,7 +672,7 @@ bool klassVtable::needs_new_vtable_entry(Method* target_method,
     return false;
   }
 
-  // we need a new entry if there is no superclass
+  //如果没有超类，我们需要一个新entry
   if (super == nullptr) {
     return true;
   }
@@ -691,6 +694,7 @@ bool klassVtable::needs_new_vtable_entry(Method* target_method,
   bool found_pkg_prvt_method = false;
   while (k != nullptr) {
     // lookup through the hierarchy for a method with matching name and sign.
+      // 调用instanceKlass.cpp#uncached_lookup_method
     super_method = InstanceKlass::cast(k)->lookup_method(name, signature);
     if (super_method == nullptr) {
       break; // we still have to search for a matching miranda method
@@ -705,6 +709,7 @@ bool klassVtable::needs_new_vtable_entry(Method* target_method,
     // methods that have less accessibility
     if (!super_method->is_static() &&
         !super_method->is_private()) {
+        // 查找是否可以复写方法
       if (can_be_overridden(super_method, classloader, classname)) {
         return false;
         // else keep looking for transitive overrides

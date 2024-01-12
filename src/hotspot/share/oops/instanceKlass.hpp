@@ -90,6 +90,10 @@ class FieldPrinter: public FieldClosure {
 };
 
 // Describes where oops are located in instances of this klass.
+// todo 字段: 实例字段遍历偏移量
+// 一个InstanceKlass实例中可能含有多个OopMapBlock实例，因为每个OopMapBlock实例只能描述当前子类中包含的对象类型属性，父类的对象类型属性由单独的OopMap-Block描述
+// start_of_nonstatic_oop_maps=addr+vtable+itable
+// 一个非静态字段一个 OopMapBlock
 class OopMapBlock {
  public:
   // Byte offset of the first oop mapped by this block.

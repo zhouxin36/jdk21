@@ -2648,6 +2648,23 @@ Method* ClassFileParser::parse_method(const ClassFileStream* const cfs,
   }
 
   // All sizing information for a Method* is finally available, now create it
+  // todo 方法: 于元空间创建ConstMethod与Method
+  // ConstMethod 存储方法的不可变部分
+  // 本地变量表
+  //  int total_lvt_length;
+  //  // 压缩的代码行号表
+  //  int linenumber_table_length;
+  //  // 异常表
+  //  int exception_table_length;
+  //  // 异常检查表
+  //  int checked_exceptions_length;
+  //  // 方法参数
+  //  int method_parameters_length;
+  //  // 方法签名
+  //  int generic_signature_index;
+  //  // 方法注解
+  //  int runtime_visible_annotations_length +
+    //           runtime_invisible_annotations_length;
   InlineTableSizes sizes(
       total_lvt_length,
       linenumber_table_length,
@@ -2675,6 +2692,7 @@ Method* ClassFileParser::parse_method(const ClassFileStream* const cfs,
   ClassLoadingService::add_class_method_size(m->size()*wordSize);
 
   // Fill in information from fixed part (access_flags already set)
+  // 保存方法属性
   m->set_constants(_cp);
   m->set_name_index(name_index);
   m->set_signature_index(signature_index);
@@ -2811,6 +2829,7 @@ void ClassFileParser::parse_methods(const ClassFileStream* const cfs,
                                                    CHECK);
 
     for (int index = 0; index < length; index++) {
+      // 调用parse_method()函数解析每个Java方法
       Method* method = parse_method(cfs,
                                     is_interface,
                                     _cp,
@@ -5803,6 +5822,7 @@ void ClassFileParser::parse_stream(const ClassFileStream* const stream,
   assert(_local_interfaces != nullptr, "invariant");
 
   // Fields (offsets are filled in later)
+  // todo 字段: 解析class字段
   _fac = new FieldAllocationCount();
   parse_fields(stream,
                _access_flags.is_interface(),
@@ -5815,6 +5835,7 @@ void ClassFileParser::parse_stream(const ClassFileStream* const stream,
   assert(_temp_field_info != nullptr, "invariant");
 
   // Methods
+  // todo 方法: 解析class方法
   parse_methods(stream,
                 _access_flags.is_interface(),
                 &_has_localvariable_table,
@@ -5949,6 +5970,7 @@ void ClassFileParser::post_process_parsed_stream(const ClassFileStream* const st
   _all_mirandas = new GrowableArray<Method*>(20);
 
   Handle loader(THREAD, _loader_data->class_loader());
+  // todo 方法: 计算vtable大小
   klassVtable::compute_vtable_size_and_num_mirandas(&_vtable_size,
                                                     &_num_miranda_methods,
                                                     _all_mirandas,
@@ -5970,6 +5992,7 @@ void ClassFileParser::post_process_parsed_stream(const ClassFileStream* const st
   _field_info = new FieldLayoutInfo();
   FieldLayoutBuilder lb(class_name(), super_klass(), _cp, /*_fields*/ _temp_field_info,
                         _parsed_annotations->is_contended(), _field_info);
+  // todo 字段: 创建字段布局
   lb.build_layout();
 
   int injected_fields_count = _temp_field_info->length() - _java_fields_count;

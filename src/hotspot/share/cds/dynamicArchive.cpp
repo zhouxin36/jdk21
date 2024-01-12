@@ -274,6 +274,7 @@ void DynamicArchiveBuilder::sort_methods(InstanceKlass* ik) const {
     // on the method sorting order.
     // If the class is unlinked, we cannot layout the i/v tables yet. This is OK, as the
     // i/v tables will be initialized at runtime after bytecode verification.
+    // todo 方法: 初始化vtable、itable
     ik->vtable().initialize_vtable();
     ik->itable().initialize_itable();
   }

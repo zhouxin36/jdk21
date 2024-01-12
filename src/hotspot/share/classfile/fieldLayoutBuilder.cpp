@@ -552,10 +552,12 @@ void FieldLayoutBuilder::regular_field_sorting() {
     FieldInfo ctrl = _field_info->at(0);
     FieldGroup* group = nullptr;
     FieldInfo fieldinfo = *it;
+    // 分组_static_fields、_root_group
     if (fieldinfo.access_flags().is_static()) {
       group = _static_fields;
     } else {
       _has_nonstatic_fields = true;
+      // 有 contended 注解的特殊分组
       if (fieldinfo.field_flags().is_contended()) {
         int g = fieldinfo.contended_group();
         if (g == 0) {
@@ -570,6 +572,9 @@ void FieldLayoutBuilder::regular_field_sorting() {
     }
     assert(group != nullptr, "invariant");
     BasicType type = Signature::basic_type(fieldinfo.signature(_constant_pool));
+    // todo 字段: 计算偏移量
+      // globalDefinitions.cpp#_type2aelembytes 表映射
+      // 其中_type2aelembytes[T_OBJECT] = heapOopSize 重新赋值
     switch(type) {
       case T_BYTE:
       case T_CHAR:
@@ -590,6 +595,7 @@ void FieldLayoutBuilder::regular_field_sorting() {
         fatal("Something wrong?");
     }
   }
+  // 排序，倒序
   _root_group->sort_by_size();
   _static_fields->sort_by_size();
   if (!_contended_groups.is_empty()) {
@@ -613,9 +619,12 @@ void FieldLayoutBuilder::insert_contended_padding(LayoutRawBlock* slot) {
 //     the layout
 void FieldLayoutBuilder::compute_regular_layout() {
   bool need_tail_padding = false;
+  // 初始化布局，插入保留block，用于instance object header头（LayoutRawBlock::RESERVED）
   prologue();
+  // 排序分组
   regular_field_sorting();
 
+  // contended注解实现
   if (_is_contended) {
     _layout->set_start(_layout->last_block());
     // insertion is currently easy because the current strategy doesn't try to fill holes
@@ -623,9 +632,13 @@ void FieldLayoutBuilder::compute_regular_layout() {
     insert_contended_padding(_layout->start());
     need_tail_padding = true;
   }
+  // todo 字段: 设置偏移量
+  // 先基本类型、后引用类型
+  // 第一个是保留block，用于instance object header头（LayoutRawBlock::RESERVED）
   _layout->add(_root_group->primitive_fields());
   _layout->add(_root_group->oop_fields());
 
+  // 最后加入_contended
   if (!_contended_groups.is_empty()) {
     for (int i = 0; i < _contended_groups.length(); i++) {
       FieldGroup* cg = _contended_groups.at(i);
@@ -644,6 +657,7 @@ void FieldLayoutBuilder::compute_regular_layout() {
   _static_layout->add_contiguously(this->_static_fields->oop_fields());
   _static_layout->add(this->_static_fields->primitive_fields());
 
+  // 收尾，计算 OopMapBlock 占用空间
   epilogue();
 }
 

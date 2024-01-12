@@ -42,7 +42,7 @@ class vtableEntry;
 
 class klassVtable {
   Klass*       _klass;            // my klass
-  int          _tableOffset;      // offset of start of vtable data within klass
+  int          _tableOffset;      // offset of start of vtable data within klass vtable相对klass起始位置偏移量
   int          _length;           // length of vtable (number of entries)
 #ifndef PRODUCT
   int          _verify_count;     // to make verify faster

@@ -74,6 +74,7 @@ class Method : public Metadata {
  private:
   // If you add a new field that points to any metaspace object, you
   // must add this field to Method::metaspace_pointers_do().
+  // ConstMethod实例用于保存方法中不可变部分的信息，如方法的字节码和方法参数的大小等
   ConstMethod*      _constMethod;                // Method read-only data.
   MethodData*       _method_data;
   MethodCounters*   _method_counters;
