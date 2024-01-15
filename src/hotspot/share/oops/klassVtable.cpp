@@ -1178,7 +1178,7 @@ void klassItable::initialize_itable(GrowableArray<Method*>* supers) {
                        _klass->name()->as_C_string());
     }
 
-    // Iterate through all interfaces
+    // 遍历所有接口
     for(int i = 0; i < num_interfaces; i++) {
       itableOffsetEntry* ioe = offset_entry(i);
       InstanceKlass* interf = ioe->interface_klass();
@@ -1267,12 +1267,13 @@ int klassItable::assign_itable_indices_for_interface(InstanceKlass* klass) {
     log_develop_debug(itables)("%3d: Initializing itable indices for interface %s",
                                ++initialize_count, klass->name()->as_C_string());
   }
-
+// 接口不需要itable表，不过方法需要编号
   Array<Method*>* methods = klass->methods();
   int nof_methods = methods->length();
   int ime_num = 0;
   for (int i = 0; i < nof_methods; i++) {
     Method* m = methods->at(i);
+      // 当为非静态和<init>、<clinit>方法时，以下函数将返回
     if (interface_method_needs_itable_index(m)) {
       assert(!m->is_final_method(), "no final interface methods");
       // If m is already assigned a vtable index, do not disturb it.
@@ -1282,6 +1283,9 @@ int klassItable::assign_itable_indices_for_interface(InstanceKlass* klass) {
         LogStream ls(lt);
         assert(m != nullptr, "methods can never be null");
         const char* sig = m->name_and_sig_as_C_string();
+          // 当_vtable_index>=0时，表示指定了vtable index，如果没有指定，则指定itable
+          // 接口默认也继承了Object类，因此也会继承来自Object的5个方法。
+          // 不过这5个方法并不需要itableEntry，已经在vtable中有对应的vtableEntry，因此这些方法调用has_vtable_index()函数将返回true，不会再指定itable index。
         if (m->has_vtable_index()) {
           ls.print("vtable index %d for method: %s, flags: ", m->vtable_index(), sig);
         } else {
@@ -1343,6 +1347,7 @@ void klassItable::initialize_itable_for_interface(int method_table_offset, Insta
   for (int i = 0; i < nof_methods; i++) {
     Method* m = methods->at(i);
     Method* target = nullptr;
+    // 如果有index 调用 lookup_instance_method_in_klasses
     if (m->has_itable_index()) {
       // This search must match the runtime resolution, i.e. selection search for invokeinterface
       // to correctly enforce loader constraints for interface method inheritance.
@@ -1372,7 +1377,7 @@ void klassItable::initialize_itable_for_interface(int method_table_offset, Insta
       if (supers != nullptr) {
         supers->at_put(start_offset + ime_num, m);
       }
-
+        // 设置itableMethodEntry的_method
       itableOffsetEntry::method_entry(_klass, method_table_offset)[ime_num].initialize(_klass, target);
       if (log_develop_is_enabled(Trace, itables)) {
         ResourceMark rm;

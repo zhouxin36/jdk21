@@ -382,7 +382,7 @@ Method* LinkResolver::lookup_instance_method_in_klasses(Klass* klass,
                                                         Symbol* signature,
                                                         Klass::PrivateLookupMode private_mode) {
   Method* result = klass->uncached_lookup_method(name, signature, Klass::OverpassLookupMode::find, private_mode);
-
+  // 循环查找方法的接口实现
   while (result != nullptr && result->is_static() && result->method_holder()->super() != nullptr) {
     Klass* super_klass = result->method_holder()->super();
     result = super_klass->uncached_lookup_method(name, signature, Klass::OverpassLookupMode::find, private_mode);
@@ -392,7 +392,8 @@ Method* LinkResolver::lookup_instance_method_in_klasses(Klass* klass,
     // Only consider klass and super klass for arrays
     return result;
   }
-
+// 当从拥有Itable的类或父类中找到接口中方法的实现方法时，result不为NULL，否则为 NULL
+// 这时候就要查找默认的方法了
   if (result == nullptr) {
     Array<Method*>* default_methods = InstanceKlass::cast(klass)->default_methods();
     if (default_methods != nullptr) {
