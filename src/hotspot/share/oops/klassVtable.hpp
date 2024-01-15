@@ -218,7 +218,9 @@ class itableMethodEntry;
 
 class itableOffsetEntry {
  private:
+    // 方法所属的接口；
   InstanceKlass* _interface;
+  // 接口下的第一个方法itableMethodEntry相对于所属Klass的偏移量。
   int      _offset;
  public:
   InstanceKlass* interface_klass() const { return _interface; }

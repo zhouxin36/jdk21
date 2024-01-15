@@ -5324,6 +5324,7 @@ void ClassFileParser::fill_instance_klass(InstanceKlass* ik,
   _local_interfaces = nullptr;
 
   // Initialize itable offset tables
+  // todo 方法: itable的初始化-itableOffsetEntry
   klassItable::setup_itable_offset_table(ik);
 
   // Compute transitive closure of interfaces this class implements
@@ -5983,6 +5984,7 @@ void ClassFileParser::post_process_parsed_stream(const ClassFileStream* const st
                                                     _local_interfaces);
 
   // Size of Java itable (in words)
+    // todo 方法: 计算itable大小
   _itable_size = _access_flags.is_interface() ? 0 :
     klassItable::compute_itable_size(_transitive_interfaces);
 
