@@ -1117,6 +1117,7 @@ ClassFileStream* ClassLoader::search_module_entries(JavaThread* current,
 
 // Called by the boot classloader to load classes
 // todo 开始: 类加载
+// todo 类加载: 开始
 InstanceKlass* ClassLoader::load_class(Symbol* name, bool search_append_only, TRAPS) {
   assert(name != nullptr, "invariant");
 

@@ -758,9 +758,10 @@ bool InstanceKlass::verify_code(TRAPS) {
   // 1) Verify the bytecodes
   return Verifier::verify(this, should_verify_class(), THREAD);
 }
-
+// todo 类加载: 类的连接
 void InstanceKlass::link_class(TRAPS) {
   assert(is_loaded(), "must be loaded");
+    //  通过_init_state属性的值判断类是否已经连接，如果已经连接，直接返回
   if (!is_linked()) {
     link_class_impl(CHECK);
   }
