@@ -805,7 +805,7 @@ bool InstanceKlass::link_class_impl(TRAPS) {
     //
     // Note that the NoClassDefFoundError is not part of the JLS, and should not be thrown
     // if we are executing Java code. This is not a problem for CDS dumping phase since
-    // it doesn't execute any Java code.
+    // it doesn't execute any Java code..
     ResourceMark rm(THREAD);
     Exceptions::fthrow(THREAD_AND_LOCATION,
                        vmSymbols::java_lang_NoClassDefFoundError(),
