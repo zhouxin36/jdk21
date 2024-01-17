@@ -192,7 +192,9 @@ bool Verifier::verify(InstanceKlass* klass, bool should_verify_class, TRAPS) {
   char* exception_message = nullptr;
 
   log_info(class, init)("Start class verification for: %s", klass->external_name());
+    // STACKMAP_ATTRIBUTE_MAJOR_VERSION的值为50
   if (klass->major_version() >= STACKMAP_ATTRIBUTE_MAJOR_VERSION) {
+      // // 使用类型检查，如果失败，则使用类型推导验证
     ClassVerifier split_verifier(jt, klass);
     // We don't use CHECK here, or on inference_verify below, so that we can log any exception.
     split_verifier.verify_class(THREAD);
@@ -203,6 +205,10 @@ bool Verifier::verify(InstanceKlass* klass, bool should_verify_class, TRAPS) {
     // it might fail the CDS runtime verifier constraint check. In that case, we
     // don't want to share the class. We only archive classes that pass the split
     // verifier.
+      // can_failover表示失败回退，对于小于NOFAILOVER_MAJOR_VERSION主版本号（值为
+      // 51）的Class文件，可以使用StackMapTable属性进行验证，这是类型检查，之前的是
+      // 类型推导验证。如果can_failover的值为true，则表示类型检查失败时可回退使用类型
+      // 推导验证
     bool can_failover = !DumpSharedSpaces &&
       klass->major_version() < NOFAILOVER_MAJOR_VERSION;
 

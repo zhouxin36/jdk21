@@ -743,6 +743,7 @@ objArrayOop InstanceKlass::signers() const {
 // process. The step comments refers to the procedure described in that section.
 // Note: implementation moved to static method to expose the this pointer.
 void InstanceKlass::initialize(TRAPS) {
+    // 类的状态不为fully_initialized时，需要进行初始化
   if (this->should_be_initialized()) {
     initialize_impl(CHECK);
     // Note: at this point the class may be initialized
@@ -758,7 +759,7 @@ bool InstanceKlass::verify_code(TRAPS) {
   // 1) Verify the bytecodes
   return Verifier::verify(this, should_verify_class(), THREAD);
 }
-// todo 类加载: 类的连接
+
 void InstanceKlass::link_class(TRAPS) {
   assert(is_loaded(), "must be loaded");
     //  通过_init_state属性的值判断类是否已经连接，如果已经连接，直接返回
@@ -796,7 +797,8 @@ bool InstanceKlass::link_class_or_fail(TRAPS) {
   }
   return is_linked();
 }
-
+// todo 类加载: 类的连接
+// instanceKlass.hpp#ClassState 连接状态
 bool InstanceKlass::link_class_impl(TRAPS) {
   if (DumpSharedSpaces && SystemDictionaryShared::has_class_failed_verification(this)) {
     // This is for CDS dumping phase only -- we use the in_error_state to indicate that
@@ -805,7 +807,7 @@ bool InstanceKlass::link_class_impl(TRAPS) {
     //
     // Note that the NoClassDefFoundError is not part of the JLS, and should not be thrown
     // if we are executing Java code. This is not a problem for CDS dumping phase since
-    // it doesn't execute any Java code..
+    // it doesn't execute any Java code.
     ResourceMark rm(THREAD);
     Exceptions::fthrow(THREAD_AND_LOCATION,
                        vmSymbols::java_lang_NoClassDefFoundError(),
@@ -814,6 +816,7 @@ bool InstanceKlass::link_class_impl(TRAPS) {
     return false;
   }
   // return if already verified
+  // 通过_init_state属性的值判断类是否已经连接，如果已经连接，直接返回
   if (is_linked()) {
     return true;
   }
@@ -823,6 +826,7 @@ bool InstanceKlass::link_class_impl(TRAPS) {
   JavaThread* jt = THREAD;
 
   // link super class before linking this class
+  // 在连接子类之前必须先连接父类
   Klass* super_klass = super();
   if (super_klass != nullptr) {
     if (super_klass->is_interface()) {  // check if super class is an interface
@@ -838,18 +842,22 @@ bool InstanceKlass::link_class_impl(TRAPS) {
     }
 
     InstanceKlass* ik_super = InstanceKlass::cast(super_klass);
+    // 1、递归调用当前函数进行父类的连接
     ik_super->link_class_impl(CHECK_false);
   }
 
   // link all interfaces implemented by this class before linking this class
+  // 在连接当前类之前连接当前类实现的所有接口
   Array<InstanceKlass*>* interfaces = local_interfaces();
   int num_interfaces = interfaces->length();
   for (int index = 0; index < num_interfaces; index++) {
     InstanceKlass* interk = interfaces->at(index);
+    // 递归调用当前函数进行接口连接
     interk->link_class_impl(CHECK_false);
   }
 
   // in case the class is linked in the process of linking its superclasses
+  // 在处理父类连接的过程中可能会导致当前类被连接，如果当前类已经连接，则直接返回
   if (is_linked()) {
     return true;
   }
@@ -864,6 +872,7 @@ bool InstanceKlass::link_class_impl(TRAPS) {
                              PerfClassTraceTime::CLASS_LINK);
 
   // verification & rewriting
+  // 接下来会完成类的验证和重写逻辑
   {
     LockLinkState init_lock(this, jt);
 
@@ -878,6 +887,7 @@ bool InstanceKlass::link_class_impl(TRAPS) {
           assert(!verified_at_dump_time(), "must be");
         }
         {
+          // 2、进行字节码验证
           bool verify_ok = verify_code(THREAD);
           if (!verify_ok) {
             return false;
@@ -887,17 +897,20 @@ bool InstanceKlass::link_class_impl(TRAPS) {
         // Just in case a side-effect of verify linked this class already
         // (which can sometimes happen since the verifier loads classes
         // using custom class loaders, which are free to initialize things)
+        // 有时候在验证的过程中会导致类的连接，不过并不会进行类的初始化
         if (is_linked()) {
           return true;
         }
 
         // also sets rewritten
+        // 3、重写类
         rewrite_class(CHECK_false);
       } else if (is_shared()) {
         SystemDictionaryShared::check_verification_constraints(this, CHECK_false);
       }
 
       // relocate jsrs and link methods after they are all rewritten
+      // 4、完成类的重写后进行方法连接
       link_methods(CHECK_false);
 
       // Initialize the vtable and interface table after
@@ -915,6 +928,7 @@ bool InstanceKlass::link_class_impl(TRAPS) {
           SystemDictionaryShared::check_linking_constraints(THREAD, this)) {
         need_init_table = false;
       }
+      // 5、初始化vtable和itable
       if (need_init_table) {
         vtable().initialize_vtable_and_check_constraints(CHECK_false);
         itable().initialize_itable_and_check_constraints(CHECK_false);
@@ -924,6 +938,7 @@ bool InstanceKlass::link_class_impl(TRAPS) {
       // In case itable verification is ever added.
       // itable().verify(tty, true);
 #endif
+      // 6、将表示类状态的_init_state属性标记为已连接状态
       set_initialization_state_and_notify(linked, THREAD);
       if (JvmtiExport::should_post_class_prepare()) {
         JvmtiExport::post_class_prepare(THREAD, this);
@@ -942,6 +957,7 @@ void InstanceKlass::rewrite_class(TRAPS) {
     assert(is_shared(), "rewriting an unshared class?");
     return;
   }
+  // 调用
   Rewriter::rewrite(this, CHECK);
   set_rewritten();
 }
@@ -1034,12 +1050,13 @@ void InstanceKlass::clean_initialization_error_table() {
     _initialization_error_table->unlink(&cleaner);
   }
 }
-
+// todo 类加载: 类的初始化
 void InstanceKlass::initialize_impl(TRAPS) {
   HandleMark hm(THREAD);
 
   // Make sure klass is linked (verified) before initialization
   // A class could already be verified, since it has been reflected upon.
+  // 初始化前先连接class
   link_class(CHECK);
 
   DTRACE_CLASSINIT_PROBE(required, -1);
@@ -1051,10 +1068,15 @@ void InstanceKlass::initialize_impl(TRAPS) {
 
   // refer to the JVM book page 47 for description of steps
   // Step 1
+  // 步骤1：在初始化之前，通过ObjectLocker加锁，防止多个线程并发初始化
   {
     MonitorLocker ml(THREAD, _init_monitor);
 
     // Step 2
+    // 步骤2：如果当前instanceKlassHandle正在初始化且初始化线程不是当前线程，则
+    // 执行 ml.wait()函数，等待其他线程初始化完成后通知
+    // 类正在进行初始化（being_initialized状态）
+    // 执行初始化的线程不是当前线程
     while (is_being_initialized() && !is_init_thread(jt)) {
       wait = true;
       jt->set_class_to_be_initialized(this);
@@ -1063,23 +1085,30 @@ void InstanceKlass::initialize_impl(TRAPS) {
     }
 
     // Step 3
+    // 步骤3：当前类正在被当前线程初始化。例如，如果X类有静态变量指向new Y类实例，
+    // Y类中又有静态变量指向new X类实例，这样外部在调用X时需要初始化X类，初始化过
+    // 程中又要触发Y类的初始化，而Y类初始化又再次触发X类的初始化
     if (is_being_initialized() && is_init_thread(jt)) {
       DTRACE_CLASSINIT_PROBE_WAIT(recursive, -1, wait);
       return;
     }
 
     // Step 4
+    // 步骤4：类已经初始化完成（fully_initialized状态）
     if (is_initialized()) {
       DTRACE_CLASSINIT_PROBE_WAIT(concurrent, -1, wait);
       return;
     }
 
     // Step 5
+    // 步骤5：类的初始化出错（initialization_error状态），抛出NoClassDef-
+    // FoundError异常
     if (is_in_error_state()) {
       throw_error = true;
     } else {
 
       // Step 6
+      // 步骤6：设置类的初始化状态为being_initialized，设置初始化的线程为当前线程
       set_init_state(being_initialized);
       set_init_thread(jt);
     }
@@ -1105,6 +1134,7 @@ void InstanceKlass::initialize_impl(TRAPS) {
   // Next, if C is a class rather than an interface, initialize it's super class and super
   // interfaces.
   if (!is_interface()) {
+    // 步骤7：如果当前初始化的不是接口和父类不为空并且父类未初始化，则初始化其父类
     Klass* super_klass = super();
     if (super_klass != nullptr && super_klass->should_be_initialized()) {
       super_klass->initialize(THREAD);
@@ -1135,6 +1165,7 @@ void InstanceKlass::initialize_impl(TRAPS) {
 
 
   // Step 8
+  // 步骤8：执行类或接口的初始化方法<clinit>
   {
     DTRACE_CLASSINIT_PROBE_WAIT(clinit, -1, wait);
     if (class_initializer() != nullptr) {
@@ -1146,6 +1177,7 @@ void InstanceKlass::initialize_impl(TRAPS) {
                                jt->get_thread_stat()->perf_recursion_counts_addr(),
                                jt->get_thread_stat()->perf_timers_addr(),
                                PerfClassTraceTime::CLASS_CLINIT);
+      // 调用类或接口的<clinit>方法
       call_class_initializer(THREAD);
     } else {
       // The elapsed time is so small it's not worth counting.
@@ -1157,12 +1189,17 @@ void InstanceKlass::initialize_impl(TRAPS) {
   }
 
   // Step 9
+    // 步骤9：如果初始化过程没有异常，说明已经完成了初始化。设置类的状态为full_
+    // initialized，并通知其他线程初始化已经完成
   if (!HAS_PENDING_EXCEPTION) {
     set_initialization_state_and_notify(fully_initialized, THREAD);
     debug_only(vtable().verify(tty, true);)
   }
   else {
     // Step 10 and 11
+      // 步骤10和11：如果初始化过程发生异常，则通过set_initialization_state_and_
+      // notify()方法设置类的状态为initialization_error并通知其他线程，然后抛出错
+      // 误或异常
     Handle e(THREAD, PENDING_EXCEPTION);
     CLEAR_PENDING_EXCEPTION;
     // JVMTI has already reported the pending exception
@@ -1560,6 +1597,7 @@ void InstanceKlass::call_class_initializer(TRAPS) {
   if (h_method() != nullptr) {
     JavaCallArguments args; // No arguments
     JavaValue result(T_VOID);
+    // 调用java方法
     JavaCalls::call(&result, h_method, &args, CHECK); // Static call (no args)
   }
 }

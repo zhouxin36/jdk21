@@ -151,13 +151,13 @@ class InstanceKlass: public Klass {
   // See "The Java Virtual Machine Specification" section 2.16.2-5 for a detailed description
   // of the class loading & initialization procedure, and the use of the states.
   enum ClassState : u1 {
-    allocated,                          // allocated (but not yet linked)
-    loaded,                             // loaded and inserted in class hierarchy (but not linked yet)
-    being_linked,                       // currently running verifier and rewriter
-    linked,                             // successfully linked/verified (but not initialized yet)
-    being_initialized,                  // currently running class initializer
-    fully_initialized,                  // initialized (successful final state)
-    initialization_error                // error happened during initialization
+    allocated,                          // InstanceKlass已分配内存 (但尚未链接)
+    loaded,                             // 加载并插入到类层次结构中 (但尚未链接)
+    being_linked,                       // 当前正在运行的验证程序和重写器
+    linked,                             // 成功链接/验证 (但尚未初始化)
+    being_initialized,                  // 当前正在运行的类初始化
+    fully_initialized,                  // 初始化完成 (成功的最终状态)
+    initialization_error                // 初始化期间发生错误
   };
 
  private:

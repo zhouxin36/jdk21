@@ -1214,6 +1214,8 @@ void Method::link_method(const methodHandle& h_method, TRAPS) {
 
   assert(adapter() == nullptr, "init'd to null");
   // todo 方法栈：获取回调函数地址，通过MethodKind方法类型获取不同地址
+  // 为解释执行设置入口，在初始化时，将Method中的_i2i_entry和_from_interpreted_
+  // entry属性设置为解释执行的入口
   address entry = Interpreter::entry_for_method(h_method);
   assert(entry != nullptr, "interpreter entry must be non-null");
   // Sets both _i2i_entry and _from_interpreted_entry
@@ -1234,6 +1236,7 @@ void Method::link_method(const methodHandle& h_method, TRAPS) {
   // called from the vtable.  We need adapters on such methods that get loaded
   // later.  Ditto for mega-morphic itable calls.  If this proves to be a
   // problem we'll make these lazily later.
+  // 为编译执行设置入口
   (void) make_adapters(h_method, CHECK);
 
   // ONLY USE the h_method now as make_adapter may have blocked

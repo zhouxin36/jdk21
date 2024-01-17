@@ -53,15 +53,22 @@ class Rewriter: public StackObj {
   GrowableArray<ResolvedIndyEntry> _initialized_indy_entries;
 
   void init_maps(int length) {
+    // _cp_map是整数类型数组，长度和常量池项的总数相同，因此可以直接将常量池项的索引
+    // 作为数组下标来获取常量池缓存项的索引
     _cp_map.trunc_to(0);
     _cp_map.at_grow(length, -1);
 
+    // _cp_cache_map是整数类型栈，初始化容量的大小为常量池项总数的一半
+    // 因为并不是所有的常量池项都需要生成常量池项索引，向栈中压入常量池项后生成常量
+    // 池缓存项的索引，通过常量池索引项可以找到常量池项索引
     _cp_cache_map.trunc_to(0);
     // Also cache resolved objects, in another different cache.
+    // _reference_map是整数类型数组
     _reference_map.trunc_to(0);
     _reference_map.at_grow(length, -1);
 
     _method_handle_invokers.trunc_to(0);
+    // _resolved_references_map是整数类型的栈
     _resolved_references_map.trunc_to(0);
     _invokedynamic_references_map.trunc_to(0);
     _resolved_reference_limit = -1;
