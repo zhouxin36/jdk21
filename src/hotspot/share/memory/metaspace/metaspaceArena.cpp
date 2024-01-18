@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2020, 2023 SAP SE. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -89,7 +89,7 @@ Metachunk* MetaspaceArena::allocate_new_chunk(size_t requested_word_size) {
 
   const chunklevel_t max_level = chunklevel::level_fitting_word_size(requested_word_size);
   const chunklevel_t preferred_level = MIN2(max_level, next_chunk_level());
-
+  // 调用
   Metachunk* c = _chunk_manager->get_chunk(preferred_level, max_level, requested_word_size);
   if (c == nullptr) {
     return nullptr;
@@ -164,8 +164,7 @@ MetaspaceArena::~MetaspaceArena() {
   InternalStats::inc_num_arena_deaths();
 }
 
-// Attempt to enlarge the current chunk to make it large enough to hold at least
-//  requested_word_size additional words.
+// 尝试扩容当前块，使其足够大，以容纳至少 requested_word_size 个额外的words。
 //
 // On success, true is returned, false otherwise.
 bool MetaspaceArena::attempt_enlarge_current_chunk(size_t requested_word_size) {
@@ -204,20 +203,21 @@ bool MetaspaceArena::attempt_enlarge_current_chunk(size_t requested_word_size) {
   }
   // If the size added to the chunk would be larger than allowed for the next growth step
   // dont enlarge.
+  // 如果下一级等级大于当前等级，不进行扩容，直接申请新的
   if (next_chunk_level() > c->level()) {
     return false;
   }
-
+  // 使用 ChunkManager 尝试扩容 current chunk 到 new_level，和释放流程的合并类似，leader合并follower
   bool success = _chunk_manager->attempt_enlarge_chunk(c);
   assert(success == false || c->free_words() >= requested_word_size, "Sanity");
   return success;
 }
 
 // Allocate memory from Metaspace.
-// 1) Attempt to allocate from the free block list.
-// 2) Attempt to allocate from the current chunk.
-// 3) Attempt to enlarge the current chunk in place if it is too small.
-// 4) Attempt to get a new chunk and allocate from that chunk.
+// 1) 尝试从free block list分配
+// 2) 尝试从current chunk分配
+// 3) current chunk尝试扩容如果太小
+// 4) 尝试获取一个新的chunk并在那个chunk分配.
 // At any point, if we hit a commit limit, we return null.
 MetaWord* MetaspaceArena::allocate(size_t requested_word_size) {
   MutexLocker cl(lock(), Mutex::_no_safepoint_check_flag);
@@ -225,7 +225,7 @@ MetaWord* MetaspaceArena::allocate(size_t requested_word_size) {
 
   MetaWord* p = nullptr;
   const size_t raw_word_size = get_raw_word_size_for_requested_word_size(requested_word_size);
-
+  // free block分配
   // Before bothering the arena proper, attempt to re-use a block from the free blocks list
   if (_fbl != nullptr && !_fbl->is_empty()) {
     p = _fbl->remove_block(raw_word_size);
@@ -241,6 +241,7 @@ MetaWord* MetaspaceArena::allocate(size_t requested_word_size) {
   }
 
   // Primary allocation
+  // 主要分配流程
   p = allocate_inner(requested_word_size);
 
 #ifdef ASSERT
@@ -279,8 +280,11 @@ MetaWord* MetaspaceArena::allocate_inner(size_t requested_word_size) {
 
     // If the current chunk is too small to hold the requested size, attempt to enlarge it.
     // If that fails, retire the chunk.
+    // 如果current chunk太小，尝试扩容
     if (current_chunk()->free_words() < raw_word_size) {
+        // 尝试扩容当前chunk
       if (!attempt_enlarge_current_chunk(raw_word_size)) {
+        // 扩容失败
         current_chunk_too_small = true;
       } else {
         DEBUG_ONLY(InternalStats::inc_num_chunks_enlarged();)
@@ -291,6 +295,7 @@ MetaWord* MetaspaceArena::allocate_inner(size_t requested_word_size) {
     // Commit the chunk far enough to hold the requested word size. If that fails, we
     // hit a limit (either GC threshold or MaxMetaspaceSize). In that case retire the
     // chunk.
+    // current chunk当前节点足够大，并且可以提交成功
     if (!current_chunk_too_small) {
       if (!current_chunk()->ensure_committed_additional(raw_word_size)) {
         UL2(info, "commit failure (requested size: " SIZE_FORMAT ")", raw_word_size);
@@ -299,6 +304,7 @@ MetaWord* MetaspaceArena::allocate_inner(size_t requested_word_size) {
     }
 
     // Allocate from the current chunk. This should work now.
+    // 足够大并且提交成功，进行分配内存
     if (!current_chunk_too_small && !commit_failure) {
       p = current_chunk()->allocate(raw_word_size);
       assert(p != nullptr, "Allocation from chunk failed.");
@@ -309,7 +315,7 @@ MetaWord* MetaspaceArena::allocate_inner(size_t requested_word_size) {
     // If we are here, we either had no current chunk to begin with or it was deemed insufficient.
     assert(current_chunk() == nullptr ||
            current_chunk_too_small || commit_failure, "Sanity");
-
+    // 从ChunkManager分配内存
     Metachunk* new_chunk = allocate_new_chunk(raw_word_size);
     if (new_chunk != nullptr) {
       UL2(debug, "allocated new chunk " METACHUNK_FORMAT " for requested word size " SIZE_FORMAT ".",
@@ -318,6 +324,7 @@ MetaWord* MetaspaceArena::allocate_inner(size_t requested_word_size) {
       assert(new_chunk->free_below_committed_words() >= raw_word_size, "Sanity");
 
       // We have a new chunk. Before making it the current chunk, retire the old one.
+      // 如果current_chunk 不为空，把current_chunk放入freeBlocks
       if (current_chunk() != nullptr) {
         salvage_chunk(current_chunk());
         DEBUG_ONLY(InternalStats::inc_num_chunks_retired();)

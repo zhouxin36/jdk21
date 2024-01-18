@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2020 SAP SE. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -44,14 +44,19 @@ MetaWord* FreeBlocks::remove_block(size_t requested_word_size) {
       "requested_word_size too small (" SIZE_FORMAT ")", requested_word_size);
   size_t real_size = 0;
   MetaWord* p = nullptr;
+  //  MaxSmallBlocksWordSize（=33）
+  // 获取>=requested_word_size的最近的一个节点
   if (requested_word_size > MaxSmallBlocksWordSize) {
     p = _tree.remove_block(requested_word_size, &real_size);
   } else {
+      // 分配 MinWordSize~MaxSmallBlocksWordSize，index=size-MinWordSize，_small_blocks为32的数组
+      // // 获取>=requested_word_size的最近的一个节点
     p = _small_blocks.remove_block(requested_word_size, &real_size);
   }
   if (p != nullptr) {
     // Blocks which are larger than a certain threshold are split and
     //  the remainder is handed back to the manager.
+      // 大于MinWordSize（=2）的切割放回freeBlocks
     const size_t waste = real_size - requested_word_size;
     if (waste > MinWordSize) {
       add_block(p + requested_word_size, waste);

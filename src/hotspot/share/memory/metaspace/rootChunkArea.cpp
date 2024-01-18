@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2020, 2022 SAP SE. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -107,9 +107,11 @@ void RootChunkArea::split(chunklevel_t target_level, Metachunk* c, FreeChunkList
   while (c->level() < target_level) {
 
     log_trace(metaspace)("Splitting chunk: " METACHUNK_FULL_FORMAT ".", METACHUNK_FULL_FORMAT_ARGS(c));
-
+    // level+1
     c->inc_level();
+    // 从ChunkHeaderPool 的freeList获取chunk
     Metachunk* splinter_chunk = ChunkHeaderPool::pool()->allocate_chunk_header();
+    // 初始化（follower chunk），base()=end()=base+level*size
     splinter_chunk->initialize(c->vsnode(), c->end(), c->level());
 
     // Fix committed words info: If over the half of the original chunk was
@@ -134,9 +136,10 @@ void RootChunkArea::split(chunklevel_t target_level, Metachunk* c, FreeChunkList
     log_trace(metaspace)(".. Splinter chunk: " METACHUNK_FULL_FORMAT ".", METACHUNK_FULL_FORMAT_ARGS(splinter_chunk));
 
     // Add splinter to free lists
+    //把follower chunk放入freelists（FreeChunkListVector）
     freelists->add(splinter_chunk);
   }
-
+  // 返回切割后的leader Metachunk* c
   assert(c->level() == target_level, "Sanity");
 
   SOMETIMES(verify();)
@@ -155,25 +158,19 @@ void RootChunkArea::split(chunklevel_t target_level, Metachunk* c, FreeChunkList
 Metachunk* RootChunkArea::merge(Metachunk* c, FreeChunkListVector* freelists) {
   // Note rules:
   //
-  // - a chunk always has a buddy, unless it is a root chunk.
-  // - In that buddy pair, a chunk is either leader or follower.
+  // - 除了root chunk，每个chunk必须有相邻chunk
+  // - chunk只能是leader或follower
   // - a chunk's base address is always aligned at its size.
   // - if chunk is leader, its base address is also aligned to the size of the next
   //   lower level, at least. A follower chunk is not.
 
   // How we merge once:
-  //
-  // For a given chunk c, which has to be free and non-root, we do:
-  // - find out if we are the leader or the follower chunk
-  // - if we are leader, next_in_vs must be the follower; if we are follower,
-  //   prev_in_vs must be the leader. Now we have the buddy chunk.
-  // - However, if the buddy chunk itself is split (of a level higher than us)
-  //   we cannot merge.
-  // - we can only merge if the buddy is of the same level as we are and it is
-  //   free.
-  // - Then we merge by simply removing the follower chunk from the address range
-  //   linked list (returning the now useless header to the pool) and decreasing
-  //   the leader chunk level by one. That makes it double the size.
+  // 有个chunk c，是free并且不是root，我们将：
+  // - 找到leader或follower
+  // - 如果是leader，下一个相邻的就是follower；如果是follower，上一个相邻的就是leader
+  // - 如果两个chunk level不一样，不能合并
+  // - 只能合并level并且free的
+  // - 合并到leader，follower释放到 ChunkHeaderPool _freelist
 
   // Example:
   // (lower case chunks are free, the * indicates the chunk we want to merge):
@@ -255,10 +252,12 @@ Metachunk* RootChunkArea::merge(Metachunk* c, FreeChunkListVector* freelists) {
       }
 
       // .. and return follower chunk header to pool for reuse.
+      // follower释放到 ChunkHeaderPool _freelist
       ChunkHeaderPool::pool()->return_chunk_header(follower);
 
       // Leader level gets decreased (leader chunk doubles in size) but
       // base address stays the same.
+      // level-1
       leader->dec_level();
 
       // set commit boundary

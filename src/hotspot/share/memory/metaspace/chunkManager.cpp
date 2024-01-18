@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2018, 2023 SAP SE. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -115,6 +115,7 @@ Metachunk* ChunkManager::get_chunk(chunklevel_t preferred_level, chunklevel_t ma
   Metachunk* c;
   {
     MutexLocker fcl(Metaspace_lock, Mutex::_no_safepoint_check_flag);
+    // 调用
     c = get_chunk_locked(preferred_level, max_level, min_committed_words);
   }
 
@@ -151,27 +152,32 @@ Metachunk* ChunkManager::get_chunk_locked(chunklevel_t preferred_level, chunklev
   //    But for now, only consider chunks larger than a certain threshold -
   //    this is to prevent large loaders (eg boot) from unnecessarily gobbling up
   //    all the tiny splinter chunks lambdas leave around.
+  // 正序遍历，大小从大到小，最多遍历三个（+2），（commit多的会放在MetaChunk链表前面）
   Metachunk* c = nullptr;
   c = _chunks.search_chunk_ascending(preferred_level, MIN2((chunklevel_t)(preferred_level + 2), max_level), min_committed_words);
 
   // 2) Search larger committed chunks:
   //    If that did not yield anything, look at larger chunks, which may be committed. We would have to split
   //    them first, of course.
+  // 逆序遍历，大小从小到大，到最大16M
   if (c == nullptr) {
     c = _chunks.search_chunk_descending(preferred_level, min_committed_words);
   }
   // 3) Search best or smaller committed chunks (second attempt):
   //    Repeat (1) but now consider even the tiniest chunks as long as they are large enough to hold the
   //    committed min size.
+  // 正序遍历，大小从大到小，到最小（CHUNK_LEVEL_1K - 14）
   if (c == nullptr) {
     c = _chunks.search_chunk_ascending(preferred_level, max_level, min_committed_words);
   }
   // if we did not get anything yet, there are no free chunks committed enough. Repeat search but look for uncommitted chunks too:
   // 4) Search best or smaller chunks, can be uncommitted:
+  // 正序遍历，大小从大到小，到最小（CHUNK_LEVEL_1K - 14），考虑没有commit的
   if (c == nullptr) {
     c = _chunks.search_chunk_ascending(preferred_level, max_level, 0);
   }
   // 5) Search a larger uncommitted chunk:
+  // 逆序遍历，大小从小到大，到最大16M，考虑没有commit的
   if (c == nullptr) {
     c = _chunks.search_chunk_descending(preferred_level, 0);
   }
@@ -183,6 +189,7 @@ Metachunk* ChunkManager::get_chunk_locked(chunklevel_t preferred_level, chunklev
   // Failing all that, allocate a new root chunk from the connected virtual space.
   // This may fail if the underlying vslist cannot be expanded (e.g. compressed class space)
   if (c == nullptr) {
+    // 从VirtualSpaceList 重新申请RootMetaChunk
     c = _vslist->allocate_root_chunk();
     if (c == nullptr) {
       UL(info, "failed to get new root chunk.");
@@ -203,6 +210,7 @@ Metachunk* ChunkManager::get_chunk_locked(chunklevel_t preferred_level, chunklev
     //  It may be larger than what the caller wanted, so we may want to split it. This should
     //  always work.
     if (c->level() < preferred_level) {
+      // 切割chunk
       split_chunk_and_add_splinters(c, preferred_level);
       assert(c->level() == preferred_level, "split failed?");
     }
@@ -252,6 +260,7 @@ void ChunkManager::return_chunk(Metachunk* c) {
 }
 
 // See return_chunk().
+// todo 元空间: 释放chunk
 void ChunkManager::return_chunk_locked(Metachunk* c) {
   assert_lock_strong(Metaspace_lock);
   UL2(debug, ": returning chunk " METACHUNK_FORMAT ".", METACHUNK_FORMAT_ARGS(c));
@@ -267,6 +276,7 @@ void ChunkManager::return_chunk_locked(Metachunk* c) {
   Metachunk* merged = nullptr;
   if (!c->is_root_chunk()) {
     // Only attempt merging if we are not of the lowest level already.
+    // 合并
     merged = c->vsnode()->merge(c, &_chunks);
   }
 

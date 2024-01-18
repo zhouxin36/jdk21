@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2020 SAP SE. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -91,8 +91,10 @@ ClassLoaderMetaspace::~ClassLoaderMetaspace() {
 // Allocate word_size words from Metaspace.
 MetaWord* ClassLoaderMetaspace::allocate(size_t word_size, Metaspace::MetadataType mdType) {
   if (Metaspace::is_class_space_allocation(mdType)) {
+      // 类空间
     return class_space_arena()->allocate(word_size);
   } else {
+      // 数据空间
     return non_class_space_arena()->allocate(word_size);
   }
 }

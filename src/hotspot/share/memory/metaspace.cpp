@@ -905,11 +905,12 @@ MetaWord* Metaspace::allocate(ClassLoaderData* loader_data, size_t word_size,
 
   MetadataType mdtype = (type == MetaspaceObj::ClassType) ? ClassType : NonClassType;
 
-  // Try to allocate metadata.
+  // 尝试分配内存
   MetaWord* result = loader_data->metaspace_non_null()->allocate(word_size, mdtype);
 
   if (result != nullptr) {
     // Zero initialize.
+    // 填充0
     Copy::fill_to_words((HeapWord*)result, word_size, 0);
 
     log_trace(metaspace)("Metaspace::allocate: type %d return " PTR_FORMAT ".", (int)type, p2i(result));
@@ -925,7 +926,7 @@ MetaWord* Metaspace::allocate(ClassLoaderData* loader_data, size_t word_size,
     assert(false, "Should not allocate with exception pending");
     return nullptr;  // caller does a CHECK_NULL too
   }
-
+  // 分配内存
   MetaWord* result = allocate(loader_data, word_size, type);
 
   if (result == nullptr) {
