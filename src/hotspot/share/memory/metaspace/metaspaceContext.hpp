@@ -43,8 +43,7 @@ class CommitLimiter;
 // - 一个 VirtualSpaceList，用于管理用于 Metaspace 的内存区域
 // - 一个 ChunkManager，位于管理chunk freelists的顶部
 //
-// In a normal VM only one or two of these contexts ever exist: one for the metaspace, and
-//  optionally another one for the compressed class space.
+// 在普通 VM 中，这些上下文中只有一个或两个存在: 一个用于元空间,以及（可选）另一个用于压缩类空间。
 //
 // For tests more contexts may be created, and this would also be a way to use Metaspace
 //  for things other than class metadata. We would have to work on the naming then.

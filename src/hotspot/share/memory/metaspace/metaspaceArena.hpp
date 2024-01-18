@@ -66,11 +66,9 @@ struct ArenaStats;
 //
 //
 
-// When the current chunk is used up, MetaspaceArena requests a new chunk from
-//  the associated ChunkManager.
+// 当当前块用完时，MetaspaceArena 会从关联的 ChunkManager 请求一个新块。
 //
-// MetaspaceArena also keeps a FreeBlocks structure to manage memory blocks which
-//  had been deallocated prematurely.
+// MetaspaceArena 还保留了一个 FreeBlocks 结构来管理过早释放的内存块。
 //
 // todo 元空间: MetaspaceArena
 class MetaspaceArena : public CHeapObj<mtClass> {

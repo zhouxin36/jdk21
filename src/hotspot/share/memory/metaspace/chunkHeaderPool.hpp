@@ -36,9 +36,8 @@
 namespace metaspace {
 
 // Chunk headers (Metachunk objects) are separate entities from their payload.
-//  Since they are allocated and released frequently in the course of buddy allocation
-//  (splitting, merging chunks happens often) we want allocation of them fast. Therefore
-//  we keep them in a simple pool (somewhat like a primitive slab allocator).
+// 由于它们在伙伴分配过程中经常被分配和释放
+// （拆分、合并块经常发生）我们希望快速分配它们. 因此，我们把它们放在一个简单的池子里 (有点像私有的slab分配器).
 // todo 元空间: ChunkHeaderPool
 // 申请 MetaChunk 用于描述内存：
 

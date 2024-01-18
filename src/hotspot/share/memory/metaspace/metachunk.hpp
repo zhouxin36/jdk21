@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2017, 2020 SAP SE. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -37,15 +37,10 @@ namespace metaspace {
 
 class VirtualSpaceNode;
 
-// A Metachunk is a contiguous metaspace memory region. It is used by
-// a MetaspaceArena to allocate from via pointer bump (somewhat similar
-// to a TLAB in java heap.
+// Metachunk 是一个连续的元空间内存区域.它被 MetaspaceArena 用于从通过指针碰撞进行分配 (有点类似于 java 堆中的 TLAB.
 //
-// The Metachunk object itself (the "chunk header") is separated from
-//  the memory region (the chunk payload) it describes. It also can have
-//  no payload (a "dead" chunk). In itself it lives in C-heap, managed
-//  as part of a pool of Metachunk headers (ChunkHeaderPool).
-//
+// Metachunk 对象本身（“chunk header”）与它所描述的内存区域（chunk payload）是分开的. 它也可以没有有效载荷（“dead” chunk）.
+// 就其本身而言，它存在于 C 堆中, managed as part of a pool of Metachunk headers (ChunkHeaderPool).
 //
 // +---------+                 +---------+                 +---------+
 // |MetaChunk| <--next/prev--> |MetaChunk| <--next/prev--> |MetaChunk|   Chunk headers
@@ -66,44 +61,36 @@ class VirtualSpaceNode;
 //
 // -- Metachunk state --
 //
-// A Metachunk is "in-use" if it is part of a MetaspaceArena. That means
-//  its memory is used - or will be used shortly - to hold VM metadata
-//  on behalf of a class loader.
+// A Metachunk is "in-use" if 它是 MetaspaceArena 的一部分. 这意味着它的内存被使用了 - 或即将使用 - 代表class loader 保存 VM 元数据.
 //
-// A Metachunk is "free" if its payload is currently unused. In that
-//  case it is managed by a chunk freelist (the ChunkManager).
+// A Metachunk is "free" if 其有效载荷当前未使用.在这种情况下，它由一个chunk freelist管理 (the ChunkManager).
 //
-// A Metachunk is "dead" if it does not have a corresponding payload.
-//  In that case it lives as part of a freelist-of-dead-chunk-headers
-//  in the ChunkHeaderPool.
+// A Metachunk is "dead" if 它没有相应的有效载荷.
+//  In that case it lives as part of a freelist-of-dead-chunk-headers in the ChunkHeaderPool.
 //
-// A Metachunk is always part of a linked list. In-use chunks are part of
-//  the chunk list of a MetaspaceArena. Free chunks are in a freelist in
-//  the ChunkManager. Dead chunk headers are in a linked list as part
-//  of the ChunkHeaderPool.
+// Metachunk 始终是链表的一部分.
+// In-use chunks are part of the chunk list of a MetaspaceArena.
+// Free chunks are in a freelist in the ChunkManager.
+// Dead chunk headers are in a linked list as part of the ChunkHeaderPool.
 //
 //
 // -- Level --
 //
-// Metachunks are managed as part of a buddy style allocation scheme.
-// Sized always in steps of power-of-2, ranging from the smallest chunk size
-// (1Kb) to the largest (4Mb) (see chunklevel.hpp).
-// Its size is encoded as level, with level 0 being the largest chunk
-// size ("root chunk").
+// Metachunks 作为伙伴式分配方案的一部分进行管理.
+// 尺寸始终以 2 的幂为步长,
+// 范围从最小的块大小 （1Kb） 到最大的块大小 （16Mb） (see chunklevel.hpp).
+// Its size is encoded as level, with level 0 being the largest chunk size ("root chunk").
 //
 //
 // -- Payload commit state --
 //
-// A Metachunk payload (the "real chunk") may be committed, partly committed
-//  or completely uncommitted. Technically, a payload may be committed
-//  "checkered" - i.e. committed and uncommitted parts may interleave - but the
-//  important part is how much contiguous space is committed starting
-//  at the base of the payload (since that's where we allocate).
+// Metachunk 有效负载（“真实块”）可以是已提交的、部分已提交的或完全未提交的。
+// 从技术上讲，有效负载可能是“方格”提交的 - i.e. 已提交和未提交的部分可能会交错 -
+// 但重要的部分是从有效载荷的底部开始承诺了多少连续空间 (因为那是我们分配的地方).
 //
-// The Metachunk keeps track of how much space is committed starting
-//  at the base of the payload - which is a performance optimization -
-//  while underlying layers (VirtualSpaceNode->commitmask) keep track
-//  of the "real" commit state, aka which granules are committed,
+// Metachunk 跟踪从有效负载底部开始提交的空间量
+// - 这是一种性能优化
+// - 而底层（VirtualSpaceNode->commitmask）则跟踪“真实”提交状态, 又名哪些颗粒被提交,
 //  independent on what chunks reside above those granules.
 
 //            +--------------+ <- end    -----------+ ----------+
@@ -131,9 +118,8 @@ class VirtualSpaceNode;
 //
 // Chunks are managed by a binary buddy style allocator
 //  (see https://en.wikipedia.org/wiki/Buddy_memory_allocation).
-// Chunks which are not a root chunk always have an adjoining buddy.
-//  The first chunk in a buddy pair is called the leader, the second
-//  one the follower.
+// 不是root chunk的chunk总是有一个相邻的伙伴.
+// 第一个 chunk 叫 leader, 第二个follower.
 //
 // +----------+----------+
 // | leader   | follower |
@@ -142,13 +128,11 @@ class VirtualSpaceNode;
 //
 // -- Layout in address space --
 //
-// In order to implement buddy style allocation, we need an easy way to get
-//  from one chunk to the Metachunk representing the neighboring chunks
+// 为了实现伙伴样式的分配，我们需要一种简单的方法从一个块到代表相邻块的 Metachunk
 //  (preceding resp. following it in memory).
-// But Metachunk headers and chunks are physically separated, and it is not
-//  possible to get the Metachunk* from the start of the chunk. Therefore
-//  Metachunk headers are part of a second linked list, describing the order
-//  in which their payload appears in memory:
+// 但是 Metachunk header 和chunk在物理上是分开的, 并且不可能从块的开头获取 Metachunk*。
+// 因此，Metachunk header 是第二个链表的一部分,
+// 描述其有效负载在内存中出现的顺序:
 //
 // +---------+                       +---------+                       +---------+
 // |MetaChunk| <--next/prev_in_vs--> |MetaChunk| <--next/prev_in_vs--> |MetaChunk|

@@ -47,11 +47,9 @@ class FreeChunkListVector;
 // VirtualSpaceNode 管理元空间的单个连续地址范围.从逻辑上讲，内存
 // 区域被拆分为一系列“root chunk areas”, 每个都包含一个root chunk或root chunk的碎片.
 //
-// The underlying memory is also logically divided into a number of "commit granules", units of memory
-//  which may be committed or uncommitted independently from each other.
+// 底层存储器在逻辑上也被划分为许多“提交颗粒”，这些存储单元可以彼此独立地提交或取消提交。
 //
-// (Both root chunk areas and commit granules have not much to do with each other - one is a way to
-//   reserve memory for the upper regions, see ChunkManager. One is a way to manage committed memory.)
+// (root chunk 和提交颗粒之间没有太大关系 - 一种是为上部区域保留内存的方法, see ChunkManager. 一种是管理提交内存的方法.)
 //
 // VirtualSpaceNode:
 //  - exposes a function to allocate a new root chunk (see VirtualSpaceNode::allocate_root_chunk()).
