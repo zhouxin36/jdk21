@@ -164,7 +164,7 @@ class VirtualSpaceNode;
 // |  chunk  |  chunk  |      chunk        |
 // +---------+---------+-------------------+
 //
-
+// todo 元空间: Metachunk
 class Metachunk {
 
   // start of chunk memory; null if dead.
@@ -193,8 +193,8 @@ class Metachunk {
   };
   State _state;
 
-  // We need unfortunately a back link to the virtual space node
-  // for splitting and merging nodes.
+  // 不幸的是，我们需要一个指向VirtualSpaceNode的反向链接
+  // 用于拆分和合并节点。
   VirtualSpaceNode* _vsnode;
 
   // A chunk header is kept in a list:

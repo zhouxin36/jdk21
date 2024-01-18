@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2018, 2020 SAP SE. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -40,25 +40,18 @@ namespace metaspace {
 class Metachunk;
 class FreeChunkListVector;
 
-// VirtualSpaceList manages a series of virtual memory regions used
-//  for metaspace.
+// VirtualSpaceList 管理一系列用于元空间的虚拟内存区域。
 //
-// Internally it holds a list of nodes (VirtualSpaceNode) each
-//  managing a single contiguous memory region. The first node of
-//  this list is the current node and used for allocation of new
-//  root chunks.
+// 在内部，它包含一个节点列表（VirtualSpaceNode），每个节点管理一个连续的内存区域。
+// 此列表的第一个节点是当前节点，用于分配新的root chunks。
 //
-// The list will only ever grow, never shrink. It will be immortal,
-//  never to be destroyed.
+// 这个名单只会永远增长，永远不会缩小。
+// 它将是不朽的，永远不会被摧毁。
 //
-// The list will only be modified under lock protection, but may be
-//  read concurrently without lock.
+// 该列表只会在锁定保护下进行修改，但可以在没有锁定的情况下同时读取。
+// 该列表可能会被阻止扩展到单个节点之外 - 在这种情况下，它会退化为单节点列表（用于类空间）。
 //
-// The list may be prevented from expanding beyond a single node -
-//  in that case it degenerates to a one-node-list (used for
-//  class space).
-//
-
+// todo 元空间: VirtualSpaceList
 class VirtualSpaceList : public CHeapObj<mtClass> {
 
   // Name

@@ -39,7 +39,15 @@ namespace metaspace {
 //  Since they are allocated and released frequently in the course of buddy allocation
 //  (splitting, merging chunks happens often) we want allocation of them fast. Therefore
 //  we keep them in a simple pool (somewhat like a primitive slab allocator).
+// todo 元空间: ChunkHeaderPool
+// 申请 MetaChunk 用于描述内存：
 
+// 首先查看 _freelist，是否有之前放回的 MetaChunk 可以使用，如果有，就返回那个 MetaChunk，并从 _freelist 移除这个 MetaChunk
+// 如果没有，读取 _current_slab 指向的 Slab，Slab 核心就是一个预分配好的 MetaChunk 数组（大小是 128），_top 指的是当前使用到数组的哪一个。
+// 如果 _top 没有到 128，返回 _top 代表的 MetaChunk，并将 _top 加 1。
+// 如果 _top 到 128，创建新的 Slab，_current_slab 指向这个新的 Slab
+
+// 回收 MetaChunk：放入 _freelist
 class ChunkHeaderPool : public CHeapObj<mtMetaspace> {
 
   static const int SlabCapacity = 128;

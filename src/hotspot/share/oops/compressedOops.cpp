@@ -107,7 +107,10 @@ bool CompressedOops::is_in(void* addr) {
 bool CompressedOops::is_in(MemRegion mr) {
   return _heap_address_range.contains(mr);
 }
-
+// todo 内存: 压缩指针
+// 对于 32 位寻址，最大仅支持 4GB 内存的寻址，这在现在的 JVM 很可能不够用，可能仅仅堆大小就超过 4GB
+// CPU 缓存并没有变大，这就导致如果使用 64 位的指针寻址，相对于之前 32 位的，CPU 缓存能容纳的指针个数小了一倍
+// 让这块虚拟内存是 8 字节对齐，一位代表8个字节，最大可支持4GB*8=32GB，超过时压缩指针失效
 CompressedOops::Mode CompressedOops::mode() {
   if (base_disjoint()) {
     return DisjointBaseNarrowOop;

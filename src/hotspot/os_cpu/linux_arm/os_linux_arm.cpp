@@ -329,10 +329,12 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
           unsafe_access = true;
         }
       } else if (sig == SIGSEGV &&
+              //并且是由于遇到擦除 null 判断的地方遇到 null 导致的 SIGSEGV
                  MacroAssembler::uses_implicit_null_check(info->si_addr)) {
           // Determination of interpreter/vtable stub/compiled code null exception
           CodeBlob* cb = CodeCache::find_blob(pc);
           if (cb != nullptr) {
+              // 如果是由于遇到 null 导致的 SIGSEGV，那么就需要评估下，是否要继续擦除这里的 null 判断了
             stub = SharedRuntime::continuation_for_implicit_exception(thread, pc, SharedRuntime::IMPLICIT_NULL);
           }
       } else if (sig == SIGILL && *(int *)pc == NativeInstruction::not_entrant_illegal_instruction) {

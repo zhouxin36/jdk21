@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 1997, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -221,18 +221,23 @@ bool MacroAssembler::uses_implicit_null_check(void* address) {
   uintptr_t addr = reinterpret_cast<uintptr_t>(address);
   uintptr_t page_size = (uintptr_t)os::vm_page_size();
 #ifdef _LP64
+    //如果压缩对象指针开启
   if (UseCompressedOops && CompressedOops::base() != nullptr) {
     // A SEGV can legitimately happen in C2 code at address
     // (heap_base + offset) if  Matcher::narrow_oop_use_complex_address
     // is configured to allow narrow oops field loads to be implicitly
     // null checked
+      //如果存在预留页(第 0 页)，起点是基址
     uintptr_t start = (uintptr_t)CompressedOops::base();
+      //如果存在预留页(第 0 页)，终点是基址 + 页大小
     uintptr_t end = start + page_size;
+      //如果地址范围在第 0 页，则是擦除 null 判断的地方遇到 null 导致的 `SIGSEGV`
     if (addr >= start && addr < end) {
       return true;
     }
   }
 #endif
+    //如果在整个虚拟空间的第 0 页，则是擦除 null 判断的地方遇到 null 导致的 `SIGSEGV`
   return addr < page_size;
 }
 

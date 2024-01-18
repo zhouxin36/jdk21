@@ -426,6 +426,10 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   Arguments::process_sun_java_launcher_properties(args);
 
   // Initialize the os module
+  // 通过系统调用 sysconf(_SC_PAGESIZE) 读取出页大小，并保存下来以供后续使用
+  // todo 内存: 初始化
+  // windows:os_windows.cpp
+  // linux:os_linux.cpp
   os::init();
 
   MACOS_AARCH64_ONLY(os::current_thread_enable_wx(WXWrite));

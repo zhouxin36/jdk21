@@ -44,9 +44,8 @@ class FreeBlocks;
 
 struct ArenaStats;
 
-// The MetaspaceArena is a growable metaspace memory pool belonging to a CLD;
-//  internally it consists of a list of metaspace chunks, of which the head chunk
-//  is the current chunk from which we allocate via pointer bump.
+// MetaspaceArena 是属于 CLD 的可增长元空间内存池;
+//  internally it consists of a list of metaspace chunks, of which the head chunk is the current chunk from which we allocate via pointer bump.
 //
 //  +---------------+
 //  |     Arena     |
@@ -73,7 +72,7 @@ struct ArenaStats;
 // MetaspaceArena also keeps a FreeBlocks structure to manage memory blocks which
 //  had been deallocated prematurely.
 //
-
+// todo 元空间: MetaspaceArena
 class MetaspaceArena : public CHeapObj<mtClass> {
 
   // Reference to an outside lock to use for synchronizing access to this arena.

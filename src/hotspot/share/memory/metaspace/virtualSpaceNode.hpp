@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2018, 2020 SAP SE. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -44,9 +44,8 @@ namespace metaspace {
 class CommitLimiter;
 class FreeChunkListVector;
 
-// VirtualSpaceNode manages a single contiguous address range of metaspace. Logically that memory
-//  region is split up into a sequence of "root chunk areas", each one containing one root chunk
-//  or splinters of a root chunk.
+// VirtualSpaceNode 管理元空间的单个连续地址范围.从逻辑上讲，内存
+// 区域被拆分为一系列“root chunk areas”, 每个都包含一个root chunk或root chunk的碎片.
 //
 // The underlying memory is also logically divided into a number of "commit granules", units of memory
 //  which may be committed or uncommitted independently from each other.
@@ -83,7 +82,7 @@ class FreeChunkListVector;
 //
 // (x = committed)
 //
-
+// todo 元空间: VirtualSpaceNode
 class VirtualSpaceNode : public CHeapObj<mtClass> {
 
   // Link to next VirtualSpaceNode
@@ -109,9 +108,11 @@ class VirtualSpaceNode : public CHeapObj<mtClass> {
 
   // The bitmap describing the commit state of the region:
   // Each bit covers a region of 64K (see constants::commit_granule_size).
+  // 实际是一个位图，用于维护哪些内存被 commit 了，哪些没有，位图的标记的单位就是前文提到的 commit_granule（commit 粒度）。
   CommitMask _commit_mask;
 
   // An array/lookup table of RootChunkArea objects. Each one describes a root chunk area.
+  // 用于维护每个 RootMetaChunk 的内存分布
   RootChunkAreaLUT _root_chunk_area_lut;
 
   // Limiter object to ask before expanding the committed size of this node.

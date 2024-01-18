@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2020 SAP SE. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -40,8 +40,8 @@ class CommitLimiter;
 
 // MetaspaceContext is a convenience bracket around:
 //
-// - a VirtualSpaceList managing a memory area used for Metaspace
-// - a ChunkManager sitting atop of that which manages chunk freelists
+// - 一个 VirtualSpaceList，用于管理用于 Metaspace 的内存区域
+// - 一个 ChunkManager，位于管理chunk freelists的顶部
 //
 // In a normal VM only one or two of these contexts ever exist: one for the metaspace, and
 //  optionally another one for the compressed class space.
@@ -55,11 +55,13 @@ class CommitLimiter;
 // - (Future TODO): Context can/should have its own allocation alignment. That way we
 //     can have different alignment between class space and non-class metaspace. That could
 //     help optimize compressed class pointer encoding, see discussion for JDK-8244943).
-
+// todo 元空间: MetaspaceContext
 class MetaspaceContext : public CHeapObj<mtMetaspace> {
 
   const char* const _name;
+    // VirtualSpaceNode 是从操作系统申请内存，与元空间内存划分的抽象隔离的中间层抽象，是一块连续的虚拟内存空间内存的抽象
   VirtualSpaceList* const _vslist;
+    // 管理所有 Chunk 的内存管理器
   ChunkManager* const _cm;
 
   MetaspaceContext(const char* name, VirtualSpaceList* vslist, ChunkManager* cm) :

@@ -68,7 +68,7 @@ struct ChunkManagerStats;
 //     |    +-+   +-+
 //  12 +----| |---| |---...
 //          +-+   +-+
-
+// todo 元空间: ChunkManager
 class ChunkManager : public CHeapObj<mtMetaspace> {
 
   // A chunk manager is connected to a virtual space list which is used

@@ -1751,7 +1751,8 @@ void os::initialize_initial_active_processor_count() {
 bool os::create_stack_guard_pages(char* addr, size_t bytes) {
   return os::pd_create_stack_guard_pages(addr, bytes);
 }
-
+// 虚拟内存划分（每个进程都有自己独立的虚拟内存空间，页表也是每个进程独立的）
+// todo 内存: 内存申请
 char* os::reserve_memory(size_t bytes, bool executable, MEMFLAGS flags) {
   char* result = pd_reserve_memory(bytes, executable);
   if (result != nullptr) {
@@ -1775,9 +1776,10 @@ static void assert_nonempty_range(const char* addr, size_t bytes) {
   assert(addr != nullptr && bytes > 0, "invalid range [" PTR_FORMAT ", " PTR_FORMAT ")",
          p2i(addr), p2i(addr) + bytes);
 }
-
+// todo 内存: 映射写入物理内存
 bool os::commit_memory(char* addr, size_t bytes, bool executable) {
   assert_nonempty_range(addr, bytes);
+    //调用每个操作系统实现不同的 pd_commit_memory 函数进行 commit
   bool res = pd_commit_memory(addr, bytes, executable);
   if (res) {
     MemTracker::record_virtual_memory_commit((address)addr, bytes, CALLER_PC);

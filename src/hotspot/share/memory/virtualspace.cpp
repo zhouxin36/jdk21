@@ -488,7 +488,19 @@ static char** get_attach_addresses_for_disjoint_mode() {
 
   return (char**) &addresses[start];
 }
-
+// todo 内存: 压缩指针初始化
+// * `32-Bit unscaled compressed oops 压缩指针模式：最大堆内存 + Java 堆起始位置不大于 4GB（并且 Java 堆起始位置不能太小），64 位地址 = 压缩对象指针`
+//  * 堆的起始位置是 0x0000 0000 fe00 0000，大小是 32 MB，压缩对象指针模式是 32-bit。其中 0x0000 0000 fe00 0000 加上 32 MB，结果就是 4GB 0x0000 0001 0000 0000。可以看出之前说的 Java 堆会从界限减去最大堆大小的位置开始 reserve 的结论是对的。在这种情况下，0x0000 0000 0000 0000 ~ 0x0000 0000 fdff ffff 的内存就给之前所说的进程系统调用以及原生内存分配使用。
+//  * UnscaledOopHeapMax(4G)-HeapBaseMinAddress(2G)=2G
+//  * -Xmx32M 0-2G
+//* `Zero based 压缩指针模式：最大堆内存 + Java 堆起始位置不大于 32GB（并且 Java 堆起始位置不能太小），64 位地址 = （压缩对象指针 << 对象对齐偏移）`
+//  * zerobased_max = OopEncodingHeapMax(32G) - CompressedClassSpaceSize(1G);
+//  * -Xmx2050M 大于2G(HeapBaseMinAddress)小于31G
+//* `Non-zero disjoint 压缩指针模式：最大堆内存不大于 32GB，由于要保证 Java 堆起始位置不能太小，最大堆内存 + Java 堆起始位置大于 32GB，64 位地址 = 基址 |（压缩对象指针 << 对象对齐偏移）`
+//  * 不与32G地址相交
+//  * -Xmx31G 大于2G(HeapBaseMinAddress)
+//* `Non-zero based 压缩指针模式：用户通过 HeapBaseMinAddress 自己指定了 Java 堆开始的地址，并且与 32GB 地址相交，并最大堆内存 + Java 堆起始位置大于 32GB，但是最大堆内存没有超过 32GB，64 位地址 = 基址 + （压缩对象指针 << 对象对齐偏移）`
+//  * -Xmx31G XX:HeapBaseMinAddress=2G 自定义基址，与32G地址相交
 void ReservedHeapSpace::initialize_compressed_heap(const size_t size, size_t alignment, size_t page_size) {
   guarantee(size + noaccess_prefix_size(alignment) <= OopEncodingHeapMax,
             "can not allocate compressed oop heap for this size");

@@ -190,13 +190,15 @@ oop SystemDictionary::get_platform_class_loader_impl(TRAPS) {
 inline ClassLoaderData* class_loader_data(Handle class_loader) {
   return ClassLoaderData::class_loader_data(class_loader());
 }
-
+//通过类加载器获取对应的 `ClassLoaderData`
 ClassLoaderData* SystemDictionary::register_loader(Handle class_loader, bool create_mirror_cld) {
   if (create_mirror_cld) {
     // Add a new class loader data to the graph.
     return ClassLoaderDataGraph::add(class_loader, true);
   } else {
+      // 如果是 null，代表是 BootstrapClassLoader，使用全局的 BootstrapClassLoader 对应的 ClassLoaderData
     return (class_loader() == nullptr) ? ClassLoaderData::the_null_class_loader_data() :
+           //否则，从 ClassLoaderDataGraph 寻找或者创建 class_loader 对应的 ClassLoaderData
                                       ClassLoaderDataGraph::find_or_create(class_loader);
   }
 }
@@ -921,11 +923,12 @@ InstanceKlass* SystemDictionary::resolve_class_from_stream(
   return k;
 }
 
-InstanceKlass* SystemDictionary::resolve_from_stream(ClassFileStream* st,
-                                                     Symbol* class_name,
-                                                     Handle class_loader,
-                                                     const ClassLoadInfo& cl_info,
+InstanceKlass* SystemDictionary::resolve_from_stream(ClassFileStream* st,// 类文件流
+                                                     Symbol* class_name,// 加载的类的名称
+                                                     Handle class_loader,// 类加载器
+                                                     const ClassLoadInfo& cl_info,// 类加载器信息
                                                      TRAPS) {
+    //隐藏类与普通类的加载方式不同，隐藏类是 JEP 371: Hidden Classes 引入的，Java 15 中发布的新特性
   if (cl_info.is_hidden()) {
     return resolve_hidden_class_from_stream(st, class_name, class_loader, cl_info, CHECK_NULL);
   } else {
