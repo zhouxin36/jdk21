@@ -45,7 +45,7 @@ class FreeBlocks;
 struct ArenaStats;
 
 // MetaspaceArena 是属于 CLD 的可增长元空间内存池;
-//  internally it consists of a list of metaspace chunks, of which the head chunk is the current chunk from which we allocate via pointer bump.
+// 在内部，它由一个元空间块列表组成，其中头部块是我们通过指针碰撞分配的当前块。
 //
 //  +---------------+
 //  |     Arena     |
