@@ -928,16 +928,16 @@ MetaWord* Metaspace::allocate(ClassLoaderData* loader_data, size_t word_size,
   }
   // 分配内存
   MetaWord* result = allocate(loader_data, word_size, type);
-
+  // 为元数据信息分配空间失败
   if (result == nullptr) {
+      // 触发GC进行内存回收后再分配
     MetadataType mdtype = (type == MetaspaceObj::ClassType) ? ClassType : NonClassType;
     tracer()->report_metaspace_allocation_failure(loader_data, word_size, type, mdtype);
 
     // Allocation failed.
     if (is_init_completed()) {
-      // Only start a GC if the bootstrapping has completed.
-      // Try to clean out some heap memory and retry. This can prevent premature
-      // expansion of the metaspace.
+      // 仅当引导完成时才启动 GC。
+      // 尝试清理一些堆内存并重试。这可以防止元空间过早膨胀。
       result = Universe::heap()->satisfy_failed_metadata_allocation(loader_data, word_size, mdtype);
     }
 
@@ -947,7 +947,7 @@ MetaWord* Metaspace::allocate(ClassLoaderData* loader_data, size_t word_size,
       return nullptr;
     }
 
-    // Zero initialize.
+    // 将分配的内存清零
     Copy::fill_to_words((HeapWord*)result, word_size, 0);
 
     log_trace(metaspace)("Metaspace::allocate: type %d return " PTR_FORMAT ".", (int)type, p2i(result));

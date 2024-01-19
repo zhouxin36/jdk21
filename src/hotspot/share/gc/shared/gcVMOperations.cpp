@@ -239,6 +239,7 @@ void VM_CollectForMetadataAllocation::doit() {
   // may have similarly failed a metadata allocation and induced
   // a GC that freed space for the allocation.
   if (!MetadataAllocationFailALot) {
+      // 再次尝试分配，可能其他线程分配失败时触发了GC，释放了空间
     _result = _loader_data->metaspace_non_null()->allocate(_size, _mdtype);
     if (_result != nullptr) {
       return;
@@ -262,6 +263,7 @@ void VM_CollectForMetadataAllocation::doit() {
   heap->collect_as_vm_thread(GCCause::_metadata_GC_threshold);
   // After a GC try to allocate without expanding.  Could fail
   // and expansion will be tried below.
+    // 在GC之后再次尝试分配
   _result = _loader_data->metaspace_non_null()->allocate(_size, _mdtype);
   if (_result != nullptr) {
     return;
@@ -278,6 +280,7 @@ void VM_CollectForMetadataAllocation::doit() {
   }
 
   // If expansion failed, do a collection clearing soft references.
+  // 再次尝试GC（这次会回收软引用）后进行内存分配
   heap->collect_as_vm_thread(GCCause::_metadata_GC_clear_soft_refs);
   _result = _loader_data->metaspace_non_null()->allocate(_size, _mdtype);
   if (_result != nullptr) {

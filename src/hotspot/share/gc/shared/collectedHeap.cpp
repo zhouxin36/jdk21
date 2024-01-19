@@ -361,6 +361,7 @@ MetaWord* CollectedHeap::satisfy_failed_metadata_allocation(ClassLoaderData* loa
     }
 
     // Generate a VM operation
+    // 设置GC参数，调用doit方法
     VM_CollectForMetadataAllocation op(loader_data,
                                        word_size,
                                        mdtype,
