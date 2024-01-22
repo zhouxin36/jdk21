@@ -1304,6 +1304,7 @@ void G1ConcurrentMark::remark() {
     }
 
     // Clean out dead classes
+    // 在并发标记阶段卸载class
     if (ClassUnloadingWithConcurrentMark) {
       GCTraceTime(Debug, gc, phases) debug("Purge Metaspace", _gc_timer_cm);
       ClassLoaderDataGraph::purge(/*at_safepoint*/true);

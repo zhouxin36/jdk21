@@ -490,6 +490,7 @@ bool ClassLoaderDataGraph::is_valid(ClassLoaderData* loader_data) {
 
 // Move class loader data from main list to the unloaded list for unloading
 // and deallocation later.
+// todo 类加载: 卸载类加载器
 bool ClassLoaderDataGraph::do_unloading() {
   assert_locked_or_safepoint(ClassLoaderDataGraph_lock);
 
@@ -509,6 +510,7 @@ bool ClassLoaderDataGraph::do_unloading() {
       data->unload();
 
       // Move dead CLD to unloading list.
+        // 从列表中移除ClassLoaderData实例
       if (prev != nullptr) {
         prev->unlink_next();
       } else {
