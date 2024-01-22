@@ -1513,6 +1513,7 @@ void G1RemSet::refine_card_concurrently(CardValue* const card_ptr,
   check_card_ptr(card_ptr, _ct);
 
   // Construct the MemRegion representing the card.
+  // 找到卡表指针所在的分区
   HeapWord* start = _ct->addr_for(card_ptr);
   // And find the region containing it.
   HeapRegion* r = _g1h->heap_region_containing(start);

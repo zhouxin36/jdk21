@@ -51,7 +51,10 @@ G1ConcurrentRefineThread::G1ConcurrentRefineThread(G1ConcurrentRefine* cr, uint 
   // set name
   set_name("G1 Refine#%d", worker_id);
 }
-
+// todo 开始: Refine线程
+// 管理RSet，这是Refine最主要的功能。RSet的更新并不是同步完成的，G1会把所有的引用关系都先放入到一个队列中，称为dirty card queue（DCQ），然后使用线程来消费这个队列以完成更新。
+// 正常来说有G1ConcRefinementThreads个线程处理；实际上除了Refine线程更新RSet之外，GC线程或者Mutator也可能会更新RSet；
+// DCQ通过Dirty Card Queue Set（DCQS）来管理；为了能够并发地处理，每个Refine线程只负责DCQS中的某几个DCQ。
 void G1ConcurrentRefineThread::run_service() {
   _vtime_start = os::elapsedVTime();
 
